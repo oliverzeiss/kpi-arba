@@ -111,9 +111,9 @@ export const KpiTutorialCard: React.FC = () => {
 
           <div className="divide-y divide-cyan-500/15 text-xs flex flex-col">
             <div className="grid grid-cols-3 pb-2.5 font-bold text-cyan-300/80 uppercase text-[11px] tracking-wider">
-              <span>[ SKOR ]</span>
-              <span className="text-center">[ GRADE ]</span>
-              <span className="text-right">[ KETERANGAN ]</span>
+              <span className="whitespace-nowrap">[ SKOR ]</span>
+              <span className="text-center whitespace-nowrap">[ GRADE ]</span>
+              <span className="text-right whitespace-nowrap">[ KETERANGAN ]</span>
             </div>
             {gradeScales.map((item) => (
               <div key={item.grade} className="grid grid-cols-3 py-2.5 items-center font-mono text-xs">

@@ -3,6 +3,7 @@ export interface Indicator {
   title: string;
   description: string; // Penjelasan
   measurementMethod: string; // Cara Ukur & Bukti (e.g., "Kehadiran %")
+  caraUkur?: string; // Cara Ukur
   weight: number; // e.g. 25 (%)
   maxTarget: number; // Default 100
   category?: string; // e.g. "Core Values", "Target Individu", "Kehadiran"
@@ -27,8 +28,8 @@ export interface KPITemplate {
   evaluationCycle: 'Bulanan' | 'Triwulanan' | 'Tahunan';
   activePeriod: string; // e.g. "Juli 2026"
   activeYear: number; // e.g. 2026
-  activeMonth: number; // e.g. 7
-  activeQuarter: 'Q1' | 'Q2' | 'Q3' | 'Q4';
+  activeMonth?: number | null; // e.g. 7
+  activeQuarter?: 'Q1' | 'Q2' | 'Q3' | 'Q4' | null;
   indicators: Indicator[];
   updatedAt: string;
 }
@@ -103,14 +104,28 @@ export interface DivisionCompletion {
   percentage: number;
 }
 
+export interface NestedPerformers {
+  all: KPISubmission[];
+  byDivision: Record<string, KPISubmission[]>;
+  byPosition: Record<string, KPISubmission[]>;
+}
+
 export interface ExecutiveReportData {
   totalSubmissions: number;
   averageCompanyScore: number;
-  topPerformers: KPISubmission[];
-  bottomPerformers: KPISubmission[];
+  topPerformers: NestedPerformers;
+  bottomPerformers: NestedPerformers;
   bottlenecks: BottleneckIndicator[];
   divisionCompletions: DivisionCompletion[];
   gradeCounts: Record<string, number>;
   divisionAverages: Record<string, number>;
+  monthlyTrend: { month: number; averageScore: number }[];
+  companyKpiTarget: number;
+}
+
+export interface AppSettings {
+  id: string;
+  companyKpiTarget: number;
+  updatedAt: string;
 }
 

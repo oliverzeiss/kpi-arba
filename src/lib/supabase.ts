@@ -107,4 +107,16 @@ CREATE INDEX IF NOT EXISTS idx_submissions_status ON kpi_submissions(status);
 CREATE INDEX IF NOT EXISTS idx_submissions_period ON kpi_submissions(year, month);
 CREATE INDEX IF NOT EXISTS idx_submissions_division ON kpi_submissions(division_name);
 CREATE INDEX IF NOT EXISTS idx_submissions_position ON kpi_submissions(position_id);
+
+-- 5. Tabel Pengaturan Aplikasi (App Settings)
+CREATE TABLE IF NOT EXISTS app_settings (
+  id VARCHAR PRIMARY KEY,
+  company_kpi_target NUMERIC(5,2) DEFAULT 75,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insert default settings if not exists
+INSERT INTO app_settings (id, company_kpi_target) 
+VALUES ('default', 75) 
+ON CONFLICT (id) DO NOTHING;
 `;

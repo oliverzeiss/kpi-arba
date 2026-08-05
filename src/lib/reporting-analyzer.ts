@@ -5,49 +5,75 @@ import {
   DivisionCompletion,
   Division,
   Position,
+  KPITemplate,
 } from '@/types/kpi';
 import { calculateGrade } from './kpi-calculator';
 
 export function generateExecutiveReport(
   submissions: KPISubmission[],
   divisions: Division[] = [],
-  positions: Position[] = []
+  positions: Position[] = [],
+  templates: KPITemplate[] = [],
+  companyKpiTarget: number = 75
 ): ExecutiveReportData {
   if (!submissions || submissions.length === 0) {
     return {
       totalSubmissions: 0,
       averageCompanyScore: 0,
-      topPerformers: [],
-      bottomPerformers: [],
+      topPerformers: { all: [], byDivision: {}, byPosition: {} },
+      bottomPerformers: { all: [], byDivision: {}, byPosition: {} },
       bottlenecks: [],
       divisionCompletions: [],
       gradeCounts: { 'A+': 0, A: 0, B: 0, C: 0, D: 0 },
       divisionAverages: {},
+      monthlyTrend: [],
+      companyKpiTarget
     };
   }
 
+  // Convert templates to a dictionary for O(1) lookup
+  const templateMap: Record<string, KPITemplate> = {};
+  templates.forEach(t => { templateMap[t.positionId] = t; });
+
   // 1. Total Submissions & Overall Company Average
   const totalSubmissions = submissions.length;
-  const totalScoreSum = submissions.reduce((acc, curr) => acc + curr.totalScore, 0);
+  // Use final score if approved
+  const getScore = (sub: KPISubmission) => sub.finalTotalScore ?? (sub.supervisorTotalScore ?? sub.totalScore);
+  const getGrade = (sub: KPISubmission) => sub.finalGrade ?? (sub.supervisorGrade ?? sub.grade);
+
+  const totalScoreSum = submissions.reduce((acc, curr) => acc + getScore(curr), 0);
   const averageCompanyScore = Math.round((totalScoreSum / totalSubmissions) * 100) / 100;
 
   // 2. Grade Counts Distribution
   const gradeCounts: Record<string, number> = { 'A+': 0, A: 0, B: 0, C: 0, D: 0 };
   submissions.forEach((sub) => {
-    if (gradeCounts[sub.grade] !== undefined) {
-      gradeCounts[sub.grade]++;
+    const grade = getGrade(sub);
+    if (gradeCounts[grade] !== undefined) {
+      gradeCounts[grade]++;
+    } else {
+      gradeCounts[grade] = 1;
     }
   });
 
-  // 3. Division Averages
+  // 3. Division Averages & Monthly Trend
   const divisionMap: Record<string, { sum: number; count: number }> = {};
+  const monthlyMap: Record<number, { sum: number; count: number }> = {};
+  
   submissions.forEach((sub) => {
     const divName = sub.divisionName || 'Lainnya';
-    if (!divisionMap[divName]) {
-      divisionMap[divName] = { sum: 0, count: 0 };
-    }
-    divisionMap[divName].sum += sub.totalScore;
+    const score = getScore(sub);
+    
+    // Division
+    if (!divisionMap[divName]) divisionMap[divName] = { sum: 0, count: 0 };
+    divisionMap[divName].sum += score;
     divisionMap[divName].count++;
+    
+    // Monthly trend
+    if (sub.month) {
+      if (!monthlyMap[sub.month]) monthlyMap[sub.month] = { sum: 0, count: 0 };
+      monthlyMap[sub.month].sum += score;
+      monthlyMap[sub.month].count++;
+    }
   });
 
   const divisionAverages: Record<string, number> = {};
@@ -55,24 +81,66 @@ export function generateExecutiveReport(
     divisionAverages[divName] =
       Math.round((divisionMap[divName].sum / divisionMap[divName].count) * 100) / 100;
   });
+  
+  const monthlyTrend = Object.keys(monthlyMap).map(m => ({
+    month: Number(m),
+    averageScore: Math.round((monthlyMap[Number(m)].sum / monthlyMap[Number(m)].count) * 100) / 100
+  })).sort((a, b) => a.month - b.month);
 
-  // 4. Top 5 Star Performers (Sorted by totalScore desc)
-  const sortedSubmissions = [...submissions].sort((a, b) => b.totalScore - a.totalScore);
-  const topPerformers = sortedSubmissions.slice(0, 5);
-
-  // 5. Bottom Performers (Grade C & D / Skor < 75 sorted asc)
-  const bottomPerformers = sortedSubmissions
-    .filter((s) => s.totalScore < 75 || s.grade === 'C' || s.grade === 'D')
+  // 4. Nested Performers
+  const sortedSubmissions = [...submissions].sort((a, b) => getScore(b) - getScore(a));
+  
+  // All Top/Bottom
+  const allTop = sortedSubmissions.slice(0, 5);
+  const allBottom = sortedSubmissions
+    .filter((s) => getScore(s) < companyKpiTarget || getGrade(s) === 'C' || getGrade(s) === 'D')
     .reverse()
     .slice(0, 5);
+
+  // By Division
+  const topByDiv: Record<string, KPISubmission[]> = {};
+  const bottomByDiv: Record<string, KPISubmission[]> = {};
+  
+  // By Position
+  const topByPos: Record<string, KPISubmission[]> = {};
+  const bottomByPos: Record<string, KPISubmission[]> = {};
+  
+  divisions.forEach(div => {
+    const divSubs = sortedSubmissions.filter(s => s.divisionName === div.name);
+    topByDiv[div.name] = divSubs.slice(0, 3);
+    bottomByDiv[div.name] = divSubs
+      .filter((s) => getScore(s) < companyKpiTarget || getGrade(s) === 'C' || getGrade(s) === 'D')
+      .reverse()
+      .slice(0, 3);
+  });
+  
+  positions.forEach(pos => {
+    const posSubs = sortedSubmissions.filter(s => s.positionId === pos.id);
+    topByPos[pos.id] = posSubs.slice(0, 3);
+    bottomByPos[pos.id] = posSubs
+      .filter((s) => getScore(s) < companyKpiTarget || getGrade(s) === 'C' || getGrade(s) === 'D')
+      .reverse()
+      .slice(0, 3);
+  });
+
+  const topPerformers = { all: allTop, byDivision: topByDiv, byPosition: topByPos };
+  const bottomPerformers = { all: allBottom, byDivision: bottomByDiv, byPosition: bottomByPos };
 
   // 6. Bottleneck Indicators (Lowest scoring indicators)
   const indicatorMap: Record<string, { sum: number; count: number; divisionName: string }> = {};
   submissions.forEach((sub) => {
-    if (sub.scores) {
-      Object.keys(sub.scores).forEach((indKey) => {
-        const score = sub.scores[indKey];
-        const title = indKey.includes('ind-') ? getIndicatorLabel(indKey) : indKey;
+    const scoresToUse = sub.supervisorScores ?? sub.scores; // Use supervisor scores if available
+    if (scoresToUse) {
+      Object.keys(scoresToUse).forEach((indKey) => {
+        const score = scoresToUse[indKey];
+        
+        // Resolve title dynamically from template
+        let title = indKey;
+        if (templateMap[sub.positionId]) {
+          const matchedInd = templateMap[sub.positionId].indicators.find(i => i.id === indKey);
+          if (matchedInd) title = matchedInd.title;
+        }
+
         if (!indicatorMap[title]) {
           indicatorMap[title] = { sum: 0, count: 0, divisionName: sub.divisionName };
         }
@@ -92,18 +160,17 @@ export function generateExecutiveReport(
     .sort((a, b) => a.averageScore - b.averageScore)
     .slice(0, 5);
 
-  // 7. Division Completion Rates
+  // 7. Division Completion Rates (No longer using guessed denominators)
   const divisionCompletions: DivisionCompletion[] = divisions.map((div) => {
-    const posInDiv = positions.filter((p) => p.divisionId === div.id);
-    const estEmployees = Math.max(posInDiv.length * 3, 5); // Est 3-5 employees per position
-    const completedCount = submissions.filter((s) => s.divisionName === div.name).length;
-    const percentage = Math.min(100, Math.round((completedCount / estEmployees) * 100));
+    const divSubmissions = submissions.filter((s) => s.divisionName === div.name);
+    const completedCount = divSubmissions.length;
+    const uniqueEmployees = new Set(divSubmissions.map(s => s.employeeName)).size;
 
     return {
       divisionName: div.name,
       completedCount,
-      totalEmployees: estEmployees,
-      percentage,
+      totalEmployees: uniqueEmployees, // Repurposed: Total unique participants in this division
+      percentage: 100, // Deprecated, percentage is not applicable for dynamic employee counts
     };
   });
 
@@ -116,13 +183,7 @@ export function generateExecutiveReport(
     divisionCompletions,
     gradeCounts,
     divisionAverages,
+    monthlyTrend,
+    companyKpiTarget
   };
-}
-
-function getIndicatorLabel(key: string): string {
-  if (key === 'ind-1') return 'Ketepatan Waktu & Kehadiran';
-  if (key === 'ind-2') return 'Keakuratan & Kualitas Hasil Kerja';
-  if (key === 'ind-3') return 'Komunikasi & Kerjasama Tim';
-  if (key === 'ind-4') return 'Inisiatif & Problem Solving';
-  return key;
 }

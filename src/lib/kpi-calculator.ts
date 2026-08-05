@@ -11,7 +11,7 @@ export function calculateTotalScore(
   let total = 0;
   for (const ind of indicators) {
     const rawScore = scores[ind.id];
-    const score = rawScore !== undefined && !isNaN(Number(rawScore)) ? Number(rawScore) : 85;
+    const score = rawScore !== undefined && !isNaN(Number(rawScore)) ? Number(rawScore) : 0;
     const weight = Number(ind.weight) || 0;
     total += (score * weight) / 100;
   }

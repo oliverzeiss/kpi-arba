@@ -15,7 +15,8 @@ interface ReviewSubmissionsTabProps {
     submissionId: string,
     supervisorScores: Record<string, number>,
     reviewerNotes: string,
-    status: 'reviewed' | 'approved'
+    status: 'reviewed' | 'approved',
+    reviewerName?: string
   ) => void;
   onRefreshData?: () => void;
 }
@@ -43,7 +44,10 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
     if (filters.month && filters.month > 0 && sub.month !== filters.month) return false;
     if (filters.divisionName && sub.divisionName !== filters.divisionName) return false;
     if (filters.positionId && sub.positionId !== filters.positionId) return false;
-    if (filters.status && sub.status !== filters.status) return false;
+    
+    // Status fallback mapping
+    const currentStatus = sub.status || 'submitted';
+    if (filters.status && currentStatus !== filters.status) return false;
     if (
       filters.searchQuery &&
       !sub.employeeName.toLowerCase().includes(filters.searchQuery.toLowerCase())
@@ -53,14 +57,14 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
   });
 
   return (
-    <GlassCard className="space-y-5">
+    <GlassCard className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-cyan-500/20 pb-4 relative z-10">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)] flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-extrabold font-sans text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)] flex items-center gap-2">
             <Layers className="w-5 h-5 text-cyan-400" />
             <span>Review & Approval Submissions Karyawan</span>
           </h2>
-          <p className="text-xs text-slate-300 font-medium mt-0.5">
+          <p className="text-xs text-slate-300 font-medium mt-1">
             Kelola dan berikan penilaian atasan per indikator secara langsung.
           </p>
         </div>
@@ -95,7 +99,7 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
               <th className="py-3 px-4">Divisi / Jabatan</th>
               <th className="py-3 px-4 text-center">Periode</th>
               <th className="py-3 px-4 text-center">Self Score</th>
-              <th className="py-3 px-4 text-center">Supervisor Score</th>
+              <th className="py-3 px-4 text-center">Atasan/Reviewer Score</th>
               <th className="py-3 px-4 text-center">Status</th>
               <th className="py-3 px-4 text-center">Aksi Review</th>
             </tr>
@@ -103,11 +107,13 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
           <tbody className="divide-y divide-cyan-500/15 font-medium">
             {filteredSubmissions.map((sub) => {
               const finalScoreDisplay = sub.finalTotalScore ?? sub.supervisorTotalScore ?? '-';
+              const safeTotalScore = sub.totalScore ?? 0;
+              const safeGrade = sub.grade ?? '-';
 
               return (
                 <tr key={sub.id} className="hover:bg-[#071c2b] transition-colors">
                   <td className="py-3.5 px-4 font-bold text-white whitespace-nowrap">
-                    {sub.employeeName}
+                    {sub.employeeName.toUpperCase()}
                   </td>
                   <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
                     {sub.divisionName} • <span className="text-slate-400">{sub.positionTitle}</span>
@@ -116,7 +122,7 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
                     {sub.period}
                   </td>
                   <td className="py-3.5 px-4 text-center font-mono text-slate-300 whitespace-nowrap">
-                    {sub.totalScore} ({sub.grade})
+                    {safeTotalScore} ({safeGrade})
                   </td>
                   <td className="py-3.5 px-4 text-center font-mono font-bold text-cyan-300 whitespace-nowrap">
                     {finalScoreDisplay}
@@ -154,8 +160,8 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
         submission={selectedSubmission}
         indicators={indicators}
         onClose={() => setSelectedSubmission(null)}
-        onSubmitReview={(id, supScores, notes, status) => {
-          onUpdateSubmissionReview(id, supScores, notes, status);
+        onSubmitReview={(id, supScores, notes, status, reviewerName) => {
+          onUpdateSubmissionReview(id, supScores, notes, status, reviewerName);
           setSelectedSubmission(null);
         }}
       />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Building2,
   Plus,
@@ -12,6 +12,7 @@ import {
 import { Division, Position, KPITemplate, Indicator } from '@/types/kpi';
 import { validateTotalWeight } from '@/lib/kpi-calculator';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { IndicatorCard } from '@/components/kpi/IndicatorCard';
 
 interface MasterBuilderTabProps {
   divisions: Division[];
@@ -30,6 +31,7 @@ interface MasterBuilderTabProps {
   onOpenEditPosModal: (pos: Position) => void;
   onOpenDeletePosModal: (pos: Position) => void;
   onOpenSupabaseModal: () => void;
+  onCopyFromPosition?: (posId: string) => void;
 }
 
 export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
@@ -49,7 +51,10 @@ export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
   onOpenEditPosModal,
   onOpenDeletePosModal,
   onOpenSupabaseModal,
+  onCopyFromPosition,
 }) => {
+  const [sourcePosId, setSourcePosId] = useState('');
+
   const weightValidation = template
     ? validateTotalWeight(template.indicators)
     : { isValid: true, totalWeight: 100 };
@@ -61,6 +66,7 @@ export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
       title: 'Indikator Baru',
       description: 'Penjelasan indikator kerja',
       measurementMethod: 'Capaian Target %',
+      caraUkur: '',
       weight: 10,
       maxTarget: 100,
       category: 'Target Utama',
@@ -87,6 +93,51 @@ export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
     const updated = template.indicators.filter((ind) => ind.id !== id);
     onUpdateTemplate({ ...template, indicators: updated });
   };
+
+  const handleCycleChange = (newCycle: 'Bulanan' | 'Triwulanan' | 'Tahunan') => {
+    if (!template) return;
+    const currentYear = template.activeYear || new Date().getFullYear();
+    if (newCycle === 'Tahunan') {
+      onUpdateTemplate({ ...template, evaluationCycle: newCycle, activeYear: currentYear, activeMonth: null, activeQuarter: null, activePeriod: `Tahun ${currentYear}` });
+    } else if (newCycle === 'Triwulanan') {
+      onUpdateTemplate({ ...template, evaluationCycle: newCycle, activeYear: currentYear, activeQuarter: 'Q1', activeMonth: null, activePeriod: `Q1 ${currentYear}` });
+    } else if (newCycle === 'Bulanan') {
+      onUpdateTemplate({ ...template, evaluationCycle: newCycle, activeYear: currentYear, activeMonth: 1, activeQuarter: null, activePeriod: `Januari ${currentYear}` });
+    }
+  };
+
+  const handleUpdateYear = (y: number) => {
+    if (!template) return;
+    const cycle = template.evaluationCycle;
+    let period = '';
+    if (cycle === 'Tahunan') period = `Tahun ${y}`;
+    else if (cycle === 'Triwulanan') period = `${template.activeQuarter || 'Q1'} ${y}`;
+    else {
+      const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      period = `${monthNames[(template.activeMonth || 1) - 1]} ${y}`;
+    }
+    onUpdateTemplate({ ...template, activeYear: y, activePeriod: period });
+  };
+
+  const handleUpdateMonth = (m: number) => {
+    if (!template) return;
+    const y = template.activeYear || new Date().getFullYear();
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    onUpdateTemplate({ ...template, activeMonth: m, activePeriod: `${monthNames[m - 1]} ${y}` });
+  };
+
+  const handleUpdateMonthAndYear = (m: number, y: number) => {
+    if (!template) return;
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    onUpdateTemplate({ ...template, activeMonth: m, activeYear: y, activePeriod: `${monthNames[m - 1]} ${y}` });
+  };
+
+  const handleUpdateQuarter = (q: 'Q1'|'Q2'|'Q3'|'Q4') => {
+    if (!template) return;
+    const y = template.activeYear || new Date().getFullYear();
+    onUpdateTemplate({ ...template, activeQuarter: q, activePeriod: `${q} ${y}` });
+  };
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
@@ -233,9 +284,7 @@ export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
                   </label>
                   <select
                     value={template.evaluationCycle}
-                    onChange={(e) =>
-                      onUpdateTemplate({ ...template, evaluationCycle: e.target.value as any })
-                    }
+                    onChange={(e) => handleCycleChange(e.target.value as any)}
                     className="bg-[#051520] border border-cyan-400/50 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-300 cursor-pointer"
                   >
                     <option value="Bulanan">Bulanan</option>
@@ -248,12 +297,55 @@ export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
                   <label className="text-[10px] text-slate-300 block font-bold uppercase tracking-wider">
                     Periode Aktif
                   </label>
-                  <input
-                    type="text"
-                    value={template.activePeriod}
-                    onChange={(e) => onUpdateTemplate({ ...template, activePeriod: e.target.value })}
-                    className="bg-[#051520] border border-cyan-400/50 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-bold w-24 text-center focus:outline-none focus:border-cyan-300 font-mono"
-                  />
+                  {template.evaluationCycle === 'Bulanan' && (
+                    <input
+                      type="month"
+                      value={template.activeYear && template.activeMonth ? `${template.activeYear}-${String(template.activeMonth).padStart(2, '0')}` : ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) return;
+                        const [y, m] = val.split('-');
+                        handleUpdateMonthAndYear(parseInt(m), parseInt(y));
+                      }}
+                      className="bg-[#051520] border border-cyan-400/50 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-bold w-36 focus:outline-none focus:border-cyan-300 font-mono [color-scheme:dark]"
+                    />
+                  )}
+                  {template.evaluationCycle === 'Tahunan' && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={template.activeYear || new Date().getFullYear()}
+                        onChange={(e) => handleUpdateYear(parseInt(e.target.value) || new Date().getFullYear())}
+                        className="bg-[#051520] border border-cyan-400/50 rounded-xl px-2 py-1.5 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-300 cursor-pointer"
+                      >
+                        {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {template.evaluationCycle === 'Triwulanan' && (
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={template.activeQuarter || 'Q1'}
+                        onChange={(e) => handleUpdateQuarter(e.target.value as any)}
+                        className="bg-[#051520] border border-cyan-400/50 rounded-xl px-2 py-1.5 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-300 cursor-pointer"
+                      >
+                        <option value="Q1">Q1</option>
+                        <option value="Q2">Q2</option>
+                        <option value="Q3">Q3</option>
+                        <option value="Q4">Q4</option>
+                      </select>
+                      <select
+                        value={template.activeYear || new Date().getFullYear()}
+                        onChange={(e) => handleUpdateYear(parseInt(e.target.value) || new Date().getFullYear())}
+                        className="bg-[#051520] border border-cyan-400/50 rounded-xl px-2 py-1.5 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-300 cursor-pointer"
+                      >
+                        {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -282,77 +374,56 @@ export const MasterBuilderTab: React.FC<MasterBuilderTabProps> = ({
 
             <div className="space-y-4">
               {template.indicators.map((ind) => (
-                <div
-                  key={ind.id}
-                  className="p-4 sm:p-5 rounded-2xl bg-[#051520]/80 hover:bg-[#071c2b] border border-cyan-400/30 hover:border-cyan-300 transition duration-300 relative space-y-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)] backdrop-blur-md group"
-                >
-                  <div className="flex justify-between items-center gap-4">
-                    <input
-                      type="text"
-                      value={ind.title}
-                      onChange={(e) => handleUpdateIndicator(ind.id, 'title', e.target.value)}
-                      className="w-full bg-[#051520] border border-cyan-400/40 rounded-xl px-3.5 py-2 text-sm font-extrabold text-white placeholder:text-slate-400/80 focus:outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 transition-all shadow-inner"
-                      placeholder="Nama Indikator..."
-                    />
-                    <button
-                      onClick={() => handleDeleteIndicator(ind.id)}
-                      className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-all cursor-pointer shrink-0"
-                      title="Hapus Indikator"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                    <div className="md:col-span-3 space-y-2">
-                      <input
-                        type="text"
-                        value={ind.description}
-                        onChange={(e) =>
-                          handleUpdateIndicator(ind.id, 'description', e.target.value)
-                        }
-                        className="w-full bg-[#051520] border border-cyan-400/30 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder:text-slate-400/70 focus:outline-none focus:border-cyan-300 transition-all"
-                        placeholder="Deskripsi / Penjelasan..."
-                      />
-                      <input
-                        type="text"
-                        value={ind.measurementMethod}
-                        onChange={(e) =>
-                          handleUpdateIndicator(ind.id, 'measurementMethod', e.target.value)
-                        }
-                        className="w-full bg-[#051520] border border-cyan-400/30 rounded-xl px-3.5 py-2 text-xs text-cyan-300 font-mono placeholder:text-cyan-400/50 focus:outline-none focus:border-cyan-300 transition-all"
-                        placeholder="Cara Ukur & Bukti (e.g. Kehadiran %)..."
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-extrabold text-cyan-300 uppercase tracking-wider block">
-                        BOBOT (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={ind.weight}
-                        onChange={(e) =>
-                          handleUpdateIndicator(ind.id, 'weight', Number(e.target.value))
-                        }
-                        className="w-full md:w-32 bg-[#051520] border border-cyan-400/50 rounded-xl px-3 py-2 text-lg font-black text-cyan-300 text-center font-mono focus:outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 shadow-inner"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <IndicatorCard 
+                  key={ind.id} 
+                  indicator={ind} 
+                  onUpdate={handleUpdateIndicator} 
+                  onDelete={handleDeleteIndicator} 
+                />
               ))}
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-cyan-500/20">
-              <button
-                onClick={handleAddIndicator}
-                className="text-xs font-extrabold text-cyan-300 hover:text-cyan-200 flex items-center gap-1.5 hover:underline cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4 text-cyan-400" />
-                <span>Tambah Indikator Baru</span>
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <button
+                  onClick={handleAddIndicator}
+                  className="text-xs font-extrabold text-cyan-300 hover:text-cyan-200 flex items-center gap-1.5 hover:underline cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4 text-cyan-400" />
+                  <span>Tambah Indikator Baru</span>
+                </button>
+
+                {onCopyFromPosition && positions.length > 1 && (
+                  <div className="flex items-center gap-2 pl-4 border-l border-cyan-500/30">
+                    <select
+                      value={sourcePosId}
+                      onChange={(e) => setSourcePosId(e.target.value)}
+                      className="bg-[#051520] border border-cyan-400/50 rounded-xl px-2 py-1.5 text-[11px] text-cyan-300 font-bold focus:outline-none focus:border-cyan-300 cursor-pointer w-40"
+                    >
+                      <option value="">Salin dari Jabatan...</option>
+                      {positions
+                        .filter((p) => p.id !== selectedPositionId)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        if (sourcePosId) {
+                          onCopyFromPosition(sourcePosId);
+                          setSourcePosId('');
+                        }
+                      }}
+                      disabled={!sourcePosId}
+                      className="px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed border border-cyan-400/40 text-cyan-300 font-bold text-[11px] transition-all cursor-pointer"
+                    >
+                      Salin
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-300 font-medium">Total Bobot:</span>

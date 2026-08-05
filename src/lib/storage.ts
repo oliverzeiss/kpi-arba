@@ -138,6 +138,3 @@ export const INITIAL_SUBMISSIONS: KPISubmission[] = [
   },
 ];
 
-// Submissions in-memory store
-export const submissionsStore: KPISubmission[] = [...INITIAL_SUBMISSIONS];
-

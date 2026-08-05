@@ -14,7 +14,8 @@ interface ReviewModalProps {
     submissionId: string,
     supervisorScores: Record<string, number>,
     reviewerNotes: string,
-    status: 'reviewed' | 'approved'
+    status: 'reviewed' | 'approved',
+    reviewerName?: string
   ) => void;
 }
 
@@ -27,6 +28,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 }) => {
   const [supervisorScores, setSupervisorScores] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState('');
+  const [reviewerName, setReviewerName] = useState('');
 
   useEffect(() => {
     if (submission) {
@@ -43,6 +45,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       });
       setSupervisorScores(initial);
       setNotes(submission.reviewerNotes || '');
+      setReviewerName(submission.reviewedBy || '');
     }
   }, [submission, indicators]);
 
@@ -53,17 +56,17 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const selfTotal = submission.totalScore;
 
   const handleScoreChange = (indicatorId: string, val: number) => {
-    const clamped = Math.max(0, Math.min(100, val));
-    setSupervisorScores((prev) => ({ ...prev, [indicatorId]: clamped }));
+    const finalVal = Math.max(0, Math.min(100, val));
+    setSupervisorScores((prev) => ({ ...prev, [indicatorId]: finalVal }));
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Review Penilaian KPI Karyawan" maxWidth="2xl">
-      <div className="space-y-5">
+      <div className="space-y-6">
         {/* Header Summary info */}
-        <div className="p-4 rounded-2xl bg-[#051520] border border-cyan-400/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#051520] border border-cyan-400/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h4 className="text-base font-extrabold text-white">{submission.employeeName}</h4>
+            <h4 className="text-base font-extrabold font-sans text-white">{submission.employeeName}</h4>
             <p className="text-xs text-cyan-300 font-medium">
               {submission.divisionName} • {submission.positionTitle} | Periode: {submission.period}
             </p>
@@ -75,12 +78,12 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         </div>
 
         {/* Indicator Dual-Scoring Table */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <label className="text-xs font-extrabold text-cyan-300 uppercase tracking-wider block">
             PENILAIAN PER INDIKATOR (SELF VS ATASAN)
           </label>
 
-          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
             {indicators.map((ind, idx) => {
               const selfScore = submission.scores ? submission.scores[ind.id] ?? 80 : 80;
               const supScore = supervisorScores[ind.id] !== undefined ? supervisorScores[ind.id] : selfScore;
@@ -89,9 +92,9 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               return (
                 <div
                   key={ind.id}
-                  className="p-3.5 rounded-xl bg-[#051520]/90 border border-cyan-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 sm:p-5 rounded-xl bg-[#051520]/90 border border-cyan-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 flex flex-col gap-1">
                     <span className="text-xs font-bold text-white block truncate">
                       {idx + 1}. {ind.title} ({ind.weight}%)
                     </span>
@@ -100,31 +103,34 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-4 shrink-0">
                     {/* Self score (Readonly) */}
                     <div className="text-center">
-                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Self</span>
-                      <span className="text-xs font-mono font-bold text-slate-200 bg-[#061e2b] px-2.5 py-1 rounded-lg border border-slate-700 block">
+                      <span className="text-[11px] text-slate-400 block font-semibold uppercase tracking-wider mb-1">Self</span>
+                      <span className="text-sm font-mono font-bold text-slate-200 bg-[#061e2b] px-3 py-1.5 rounded-lg border border-slate-700 block">
                         {selfScore}
                       </span>
                     </div>
 
                     {/* Supervisor input score */}
                     <div className="text-center">
-                      <span className="text-[10px] text-cyan-300 block font-semibold uppercase">Atasan</span>
+                      <span className="text-[11px] text-cyan-300 block font-semibold uppercase tracking-wider mb-1">Atasan</span>
                       <input
                         type="number"
                         min="0"
                         max="100"
-                        value={supScore}
-                        onChange={(e) => handleScoreChange(ind.id, Number(e.target.value))}
-                        className="w-16 bg-[#061e2b] border border-cyan-400/50 rounded-lg py-1 text-center text-xs font-mono font-extrabold text-cyan-300 focus:outline-none focus:border-cyan-300"
+                        value={supScore !== undefined ? supScore.toString() : '0'}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          handleScoreChange(ind.id, raw === '' ? 0 : Number(raw));
+                        }}
+                        className="w-16 bg-[#061e2b] border border-cyan-400/50 rounded-lg py-1 text-center text-sm font-mono font-extrabold text-cyan-300 focus:outline-none focus:border-cyan-300"
                       />
                     </div>
 
                     {/* Gap badge */}
-                    <div className="text-center min-w-[50px]">
-                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Gap</span>
+                    <div className="text-center min-w-[56px]">
+                      <span className="text-[11px] text-slate-400 block font-semibold uppercase tracking-wider mb-1">Gap</span>
                       <span
                         className={`text-xs font-mono font-extrabold px-2 py-0.5 rounded-md block ${
                           gap > 0
@@ -159,31 +165,46 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
-        {/* Catatan Reviewer */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-cyan-300 uppercase tracking-wider block">
-            CATATAN / FEEDBACK REVIEWER
-          </label>
-          <textarea
-            rows={2}
-            placeholder="Masukkan umpan balik atau instruksi perbaikan..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full bg-[#051520] border border-cyan-400/40 rounded-xl p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-300 font-medium"
-          />
+        {/* Nama Reviewer & Catatan */}
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-extrabold text-cyan-300 uppercase tracking-wider block">
+              NAMA REVIEWER / ATASAN
+            </label>
+            <input
+              type="text"
+              placeholder="Masukkan nama Anda..."
+              value={reviewerName}
+              onChange={(e) => setReviewerName(e.target.value)}
+              className="w-full bg-[#051520] border border-cyan-400/40 rounded-xl p-3 text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-300 font-medium"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-extrabold text-cyan-300 uppercase tracking-wider block">
+              CATATAN / FEEDBACK REVIEWER
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Masukkan umpan balik atau instruksi perbaikan..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full bg-[#051520] border border-cyan-400/40 rounded-xl p-3 text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-300 font-medium"
+            />
+          </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-2">
           <button
-            onClick={() => onSubmitReview(submission.id, supervisorScores, notes, 'reviewed')}
+            onClick={() => onSubmitReview(submission.id, supervisorScores, notes, 'reviewed', reviewerName)}
             className="w-1/2 py-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/40 text-cyan-300 text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition-all"
           >
             <Save className="w-4 h-4" />
             <span>Simpan Review (Reviewed 🔵)</span>
           </button>
           <button
-            onClick={() => onSubmitReview(submission.id, supervisorScores, notes, 'approved')}
+            onClick={() => onSubmitReview(submission.id, supervisorScores, notes, 'approved', reviewerName)}
             className="w-1/2 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] cursor-pointer transition-all"
           >
             <CheckCircle2 className="w-4 h-4" />

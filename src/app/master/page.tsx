@@ -17,9 +17,7 @@ import {
   KPITemplate,
   QuarterlySummary,
   KPISubmission,
-  ExecutiveReportData,
 } from '@/types/kpi';
-import { generateExecutiveReport } from '@/lib/reporting-analyzer';
 import { getSupabaseConfig, SUPABASE_SQL_SCHEMA } from '@/lib/supabase';
 
 import { PinAuthScreen } from '@/components/kpi/PinAuthScreen';
@@ -111,10 +109,14 @@ export default function MasterTemplatePage() {
   };
 
   const fetchSubmissionsData = () => {
-    fetch('/api/kpi/recap')
+    fetch(`/api/submissions?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
-        if (data.submissions) setSubmissions(data.submissions);
+        if (Array.isArray(data)) {
+          setSubmissions(data);
+        } else if (data.submissions) {
+          setSubmissions(data.submissions);
+        }
       })
       .catch(console.error);
   };
@@ -126,14 +128,34 @@ export default function MasterTemplatePage() {
     fetch(`/api/kpi/master?positionId=${selectedPositionId}`)
       .then((res) => res.json())
       .then((data) => {
-        setTemplate(data);
+        if (data && Object.keys(data).length > 0) {
+          setTemplate(data);
+        } else {
+          // If no template exists for this position, create a blank one
+          const pos = positions.find((p) => p.id === selectedPositionId);
+          const div = divisions.find((d) => d.id === pos?.divisionId);
+          setTemplate({
+            id: `tpl-${selectedPositionId}-${Date.now()}`,
+            positionId: selectedPositionId,
+            positionTitle: pos?.title || 'Jabatan Baru',
+            divisionName: div?.name || 'Divisi',
+            evaluationCycle: 'Bulanan',
+            activePeriod: 'Juli 2026',
+            activeYear: 2026,
+            activeMonth: 7,
+            activeQuarter: 'Q3',
+            indicators: [],
+            updatedAt: new Date().toISOString(),
+          });
+        }
       })
       .catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, selectedPositionId]);
 
   // Fetch Quarterly Recap
   const fetchQuarterlyRecap = () => {
-    fetch('/api/kpi/recap?type=quarterly_recap')
+    fetch(`/api/kpi/recap?type=quarterly_recap&t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.summaries) setRecapSummaries(data.summaries);
@@ -146,10 +168,10 @@ export default function MasterTemplatePage() {
       fetchQuarterlyRecap();
       fetchSubmissionsData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // Executive Analytics Computed Data
-  const executiveReport: ExecutiveReportData = generateExecutiveReport(submissions, divisions, positions);
+  // (ExecutiveAnalyticsTab fetches its own data now)
 
   // Save Template Mutation
   const handleSaveTemplate = async () => {
@@ -176,6 +198,30 @@ export default function MasterTemplatePage() {
       setSaveStatus('Master Template KPI Berhasil Disimpan!');
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal menyimpan template');
+    }
+  };
+
+  // Copy Template Indicators
+  const handleCopyFromPosition = async (sourceId: string) => {
+    try {
+      const res = await fetch(`/api/kpi/master?positionId=${sourceId}`);
+      const data = await res.json();
+      if (data && data.indicators && data.indicators.length > 0) {
+        const newIndicators = data.indicators.map((ind: any) => ({
+          ...ind,
+          id: `ind-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        }));
+        setTemplate((prev) =>
+          prev
+            ? {
+                ...prev,
+                indicators: [...prev.indicators, ...newIndicators],
+              }
+            : null
+        );
+      }
+    } catch (err) {
+      console.error('Failed to copy indicators:', err);
     }
   };
 
@@ -327,13 +373,14 @@ export default function MasterTemplatePage() {
     }
   };
 
-  // Dual Assessment Review Handler
-  const handleUpdateSubmissionReview = (
+  const handleUpdateSubmissionReview = async (
     submissionId: string,
     supervisorScores: Record<string, number>,
     reviewerNotes: string,
-    status: 'reviewed' | 'approved'
+    status: 'reviewed' | 'approved',
+    reviewerName?: string
   ) => {
+    // Optimistic UI update
     setSubmissions((prev) =>
       prev.map((sub) => {
         if (sub.id === submissionId) {
@@ -342,11 +389,35 @@ export default function MasterTemplatePage() {
             supervisorScores,
             reviewerNotes,
             status,
+            ...(reviewerName && { reviewedBy: reviewerName }),
           };
         }
         return sub;
       })
     );
+
+    try {
+      // Actually save to backend API
+      const templateForSub = submissions.find(s => s.id === submissionId);
+      const res = await fetch(`/api/submissions/${submissionId}/review`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supervisorScores,
+          reviewerNotes,
+          status,
+          reviewerName,
+        }),
+      });
+      
+      if (!res.ok) {
+        console.error('Failed to update submission review');
+        fetchSubmissionsData(); // Revert on failure
+      }
+    } catch (err) {
+      console.error(err);
+      fetchSubmissionsData(); // Revert on failure
+    }
   };
 
   // Render PIN Auth Screen if not authenticated
@@ -378,10 +449,10 @@ export default function MasterTemplatePage() {
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)]">
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-sans text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)]">
               Master Admin & HR Analytics
             </h1>
-            <p className="text-xs text-slate-300 font-medium mt-0.5">
+            <p className="text-xs text-slate-300 font-medium mt-1">
               Kelola Template KPI, review penilaian atasan, rekap triwulan, dan analisis eksekutif.
             </p>
           </div>
@@ -451,6 +522,7 @@ export default function MasterTemplatePage() {
           onSaveTemplate={handleSaveTemplate}
           saveStatus={saveStatus}
           errorMessage={errorMessage}
+          onCopyFromPosition={handleCopyFromPosition}
           onOpenAddDivModal={() => {
             setDivNameInput('');
             setSelectedDivision(null);
@@ -497,19 +569,11 @@ export default function MasterTemplatePage() {
       )}
 
       {activeTab === 'recap' && (
-        <RecapTab
-          recapSummaries={recapSummaries}
-          submissions={submissions}
-          onRefreshData={fetchQuarterlyRecap}
-        />
+        <RecapTab submissions={submissions} />
       )}
 
       {activeTab === 'analytics' && (
-        <ExecutiveAnalyticsTab
-          executiveReport={executiveReport}
-          submissions={submissions}
-          recapSummaries={recapSummaries}
-        />
+        <ExecutiveAnalyticsTab />
       )}
 
       {/* Division CRUD Modal */}

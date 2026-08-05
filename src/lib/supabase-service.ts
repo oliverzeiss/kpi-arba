@@ -64,6 +64,7 @@ export async function editDivisionService(id: string, name: string): Promise<voi
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('divisions').update({ name }).eq('id', id);
+      return;
     } catch (e) {
       console.warn('[SupabaseService] editDivision error:', e);
     }
@@ -75,6 +76,7 @@ export async function deleteDivisionService(id: string): Promise<void> {
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('divisions').delete().eq('id', id);
+      return;
     } catch (e) {
       console.warn('[SupabaseService] deleteDivision error:', e);
     }
@@ -131,6 +133,7 @@ export async function editPositionService(id: string, title: string, divisionId:
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('positions').update({ title, division_id: divisionId }).eq('id', id);
+      return;
     } catch (e) {
       console.warn('[SupabaseService] editPosition error:', e);
     }
@@ -144,6 +147,7 @@ export async function deletePositionService(id: string): Promise<void> {
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('positions').delete().eq('id', id);
+      return;
     } catch (e) {
       console.warn('[SupabaseService] deletePosition error:', e);
     }
@@ -205,12 +209,39 @@ export async function saveTemplateService(template: KPITemplate): Promise<void> 
       };
 
       await supabase.from('kpi_templates').upsert(row);
+      return;
     } catch (e) {
       console.warn('[SupabaseService] saveTemplate error:', e);
     }
   }
 
   inMemoryTemplates[template.positionId] = template;
+}
+
+export async function fetchAllTemplatesService(): Promise<KPITemplate[]> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('kpi_templates').select('*');
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          positionId: d.position_id,
+          positionTitle: d.position_title,
+          divisionName: d.division_name,
+          evaluationCycle: d.evaluation_cycle,
+          activePeriod: d.active_period,
+          activeYear: d.active_year,
+          activeMonth: d.active_month,
+          activeQuarter: d.active_quarter,
+          indicators: d.indicators_json,
+          updatedAt: d.updated_at,
+        }));
+      }
+    } catch (e) {
+      console.warn('[SupabaseService] fetchAllTemplates error:', e);
+    }
+  }
+  return Object.values(inMemoryTemplates);
 }
 
 // ============================================================================
@@ -223,6 +254,7 @@ export async function fetchSubmissionsService(filters?: {
   divisionName?: string;
   positionId?: string;
   status?: string;
+  employeeName?: string;
 }): Promise<KPISubmission[]> {
   if (isSupabaseConfigured && supabase) {
     try {
@@ -233,6 +265,7 @@ export async function fetchSubmissionsService(filters?: {
       if (filters?.divisionName) query = query.eq('division_name', filters.divisionName);
       if (filters?.positionId) query = query.eq('position_id', filters.positionId);
       if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.employeeName) query = query.ilike('employee_name', `%${filters.employeeName}%`);
 
       const { data, error } = await query;
       if (!error && data) {
@@ -278,6 +311,7 @@ export async function fetchSubmissionsService(filters?: {
   if (filters?.divisionName) result = result.filter((s) => s.divisionName === filters.divisionName);
   if (filters?.positionId) result = result.filter((s) => s.positionId === filters.positionId);
   if (filters?.status) result = result.filter((s) => (s.status || 'submitted') === filters.status);
+  if (filters?.employeeName) result = result.filter((s) => s.employeeName.toLowerCase().includes(filters.employeeName!.toLowerCase()));
 
   return result;
 }
@@ -337,6 +371,7 @@ export async function createSubmissionService(
         }
         throw new Error(error.message);
       }
+      return newSub;
     } catch (e: any) {
       console.warn('[SupabaseService] createSubmission error:', e);
       if (e.message && e.message.includes('sudah mengirim')) throw e;
@@ -346,7 +381,7 @@ export async function createSubmissionService(
   // Prevent duplicate in-memory
   const dupIndex = inMemorySubmissions.findIndex(
     (s) =>
-      s.employeeName.toLowerCase() === employeeName.trim().toLowerCase() &&
+      s.employeeName === employeeName.trim() &&
       s.positionId === template.positionId &&
       s.period === newSub.period
   );
@@ -363,8 +398,9 @@ export async function updateSubmissionReviewService(
   supervisorScores: Record<string, number>,
   indicators: any[],
   reviewerNotes: string,
-  status: 'reviewed' | 'approved'
-): Promise<void> {
+  status: 'reviewed' | 'approved',
+  reviewerName?: string
+) {
   const supTotal = calculateTotalScore(supervisorScores, indicators);
   const supGrade = calculateGrade(supTotal);
 
@@ -378,6 +414,7 @@ export async function updateSubmissionReviewService(
         reviewer_notes: reviewerNotes,
         status,
         reviewed_at: new Date().toISOString(),
+        ...(reviewerName && { reviewed_by: reviewerName }),
       };
 
       if (status === 'approved') {
@@ -388,6 +425,7 @@ export async function updateSubmissionReviewService(
       }
 
       await supabase.from('kpi_submissions').update(updates).eq('id', submissionId);
+      return;
     } catch (e) {
       console.warn('[SupabaseService] updateSubmissionReview error:', e);
     }
@@ -405,6 +443,7 @@ export async function updateSubmissionReviewService(
         reviewerNotes,
         status,
         reviewedAt: new Date().toISOString(),
+        ...(reviewerName && { reviewedBy: reviewerName }),
       };
       if (status === 'approved') {
         updated.finalTotalScore = supTotal;
@@ -416,4 +455,54 @@ export async function updateSubmissionReviewService(
     }
     return sub;
   });
+}
+
+// ============================================================================
+// APP SETTINGS CRUD
+// ============================================================================
+import { AppSettings } from '@/types/kpi';
+
+let inMemorySettings: AppSettings = {
+  id: 'default',
+  companyKpiTarget: 75,
+  updatedAt: new Date().toISOString(),
+};
+
+export async function fetchAppSettingsService(): Promise<AppSettings> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+      if (!error && data) {
+        return {
+          id: data.id,
+          companyKpiTarget: Number(data.company_kpi_target),
+          updatedAt: data.updated_at,
+        };
+      }
+    } catch (e) {
+      console.warn('[SupabaseService] fetchAppSettings error:', e);
+    }
+  }
+  return inMemorySettings;
+}
+
+export async function updateAppSettingsService(target: number): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('app_settings').upsert({
+        id: 'default',
+        company_kpi_target: target,
+        updated_at: new Date().toISOString(),
+      });
+      return;
+    } catch (e) {
+      console.warn('[SupabaseService] updateAppSettings error:', e);
+    }
+  }
+  inMemorySettings.companyKpiTarget = target;
+  inMemorySettings.updatedAt = new Date().toISOString();
 }

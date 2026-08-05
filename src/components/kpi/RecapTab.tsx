@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, Download, RefreshCw } from 'lucide-react';
 import { QuarterlySummary, KPISubmission } from '@/types/kpi';
 import { exportToExcel } from '@/lib/excel-exporter';
 import { GlassCard } from '@/components/ui/GlassCard';
 
 interface RecapTabProps {
-  recapSummaries: QuarterlySummary[];
-  submissions: KPISubmission[];
-  onRefreshData?: () => void;
+  // If the parent still wants to pass default or all submissions
+  submissions?: KPISubmission[];
 }
 
 const QUARTER_MONTHS: Record<string, [string, string, string]> = {
@@ -17,15 +16,33 @@ const QUARTER_MONTHS: Record<string, [string, string, string]> = {
   Q4: ['Oktober', 'November', 'Desember'],
 };
 
-export const RecapTab: React.FC<RecapTabProps> = ({
-  recapSummaries,
-  submissions,
-  onRefreshData,
-}) => {
+export const RecapTab: React.FC<RecapTabProps> = ({ submissions = [] }) => {
+  const currentYear = new Date().getFullYear();
   const [selectedQuarter, setSelectedQuarter] = useState<'Q1' | 'Q2' | 'Q3' | 'Q4'>('Q3');
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [recapSummaries, setRecapSummaries] = useState<QuarterlySummary[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const monthNames = QUARTER_MONTHS[selectedQuarter] || QUARTER_MONTHS.Q3;
 
-  const filteredSummaries = recapSummaries.filter((s) => s.quarter.includes(selectedQuarter));
+  const fetchRecapData = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/kpi/recap?type=quarterly_recap&quarter=${selectedQuarter}&year=${selectedYear}&t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok) {
+        setRecapSummaries(data.summaries || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch recap:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecapData();
+  }, [selectedQuarter, selectedYear]);
 
   return (
     <GlassCard className="space-y-6">
@@ -41,6 +58,19 @@ export const RecapTab: React.FC<RecapTabProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Select Year */}
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="bg-[#051520] border border-cyan-400/50 rounded-xl px-3 py-2 text-xs font-bold text-cyan-300 focus:outline-none focus:border-cyan-300 cursor-pointer"
+          >
+            {[currentYear - 1, currentYear, currentYear + 1].map((yr) => (
+              <option key={yr} value={yr}>
+                Tahun {yr}
+              </option>
+            ))}
+          </select>
+
           {/* Select Quarter */}
           <select
             value={selectedQuarter}
@@ -54,21 +84,26 @@ export const RecapTab: React.FC<RecapTabProps> = ({
           </select>
 
           <button
-            onClick={() => exportToExcel(submissions, recapSummaries)}
+            onClick={() => {
+              const filteredSubmissions = submissions.filter(sub => {
+                const actualQuarter = `Q${Math.ceil(sub.month / 3)}`;
+                return actualQuarter === selectedQuarter && sub.year === selectedYear;
+              });
+              exportToExcel(filteredSubmissions, recapSummaries);
+            }}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Download Excel (.xls)</span>
           </button>
 
-          {onRefreshData && (
-            <button
-              onClick={onRefreshData}
-              className="px-3 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={fetchRecapData}
+            disabled={isLoading}
+            className={`px-3 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -87,7 +122,7 @@ export const RecapTab: React.FC<RecapTabProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-cyan-500/15 font-medium">
-            {filteredSummaries.map((sum, idx) => (
+            {recapSummaries.map((sum, idx) => (
               <tr key={idx} className="hover:bg-[#071c2b] transition-colors">
                 <td className="py-3.5 px-4 font-bold text-white whitespace-nowrap">
                   {sum.employeeName}
@@ -116,10 +151,10 @@ export const RecapTab: React.FC<RecapTabProps> = ({
               </tr>
             ))}
 
-            {filteredSummaries.length === 0 && (
+            {!isLoading && recapSummaries.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-slate-400 font-medium">
-                  Belum ada data rekapan triwulan untuk {selectedQuarter}. Data akan otomatis terisi saat pengisian KPI dilakukan.
+                  Belum ada data rekapan triwulan untuk {selectedQuarter} {selectedYear}. Data akan otomatis terisi saat pengisian KPI dilakukan.
                 </td>
               </tr>
             )}

@@ -20,7 +20,7 @@ export default function EmployeeKPIPage() {
   // Form State
   const [employeeName, setEmployeeName] = useState('');
   const [achievementNotes, setAchievementNotes] = useState('');
-  const [selectedPositionId, setSelectedPositionId] = useState('pos-3'); // Default Admin IT
+  const [selectedPositionId, setSelectedPositionId] = useState('');
 
   const [positions, setPositions] = useState<Position[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -46,7 +46,7 @@ export default function EmployeeKPIPage() {
   }, []);
 
   // Previous month trend score
-  const [previousMonthScore, setPreviousMonthScore] = useState<number>(82);
+  const [previousMonthScore, setPreviousMonthScore] = useState<number>(75);
 
   // Modals UI
   const [activeModalIndicator, setActiveModalIndicator] = useState<Indicator | null>(null);
@@ -62,7 +62,10 @@ export default function EmployeeKPIPage() {
     fetch('/api/kpi/master')
       .then((res) => res.json())
       .then((data) => {
-        if (data.positions) setPositions(data.positions);
+        if (data.positions && data.positions.length > 0) {
+          setPositions(data.positions);
+          setSelectedPositionId(data.positions[0].id);
+        }
         if (data.divisions) setDivisions(data.divisions);
       })
       .catch(console.error);
@@ -73,14 +76,18 @@ export default function EmployeeKPIPage() {
     if (!selectedPositionId) return;
     fetch(`/api/kpi/master?positionId=${selectedPositionId}`)
       .then((res) => res.json())
-      .then((tpl: KPITemplate) => {
+      .then((tpl: KPITemplate | null) => {
         setTemplate(tpl);
-        const initialScores: Record<string, number> = {};
-        tpl.indicators.forEach((ind, idx) => {
-          initialScores[ind.id] =
-            scores[ind.id] !== undefined ? scores[ind.id] : idx === 0 ? 88 : idx === 3 ? 90 : 84;
+        setScores((prevScores) => {
+          const initialScores: Record<string, number> = {};
+          if (tpl && tpl.indicators) {
+            tpl.indicators.forEach((ind, idx) => {
+              initialScores[ind.id] =
+                prevScores[ind.id] !== undefined ? prevScores[ind.id] : idx === 0 ? 88 : idx === 3 ? 90 : 84;
+            });
+          }
+          return initialScores;
         });
-        setScores(initialScores);
       })
       .catch(console.error);
 

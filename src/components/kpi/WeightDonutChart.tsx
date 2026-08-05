@@ -20,6 +20,8 @@ export const WeightDonutChart: React.FC<WeightDonutChartProps> = ({
   onIndicatorClick,
   isDonutMounted,
 }) => {
+  const totalSum = indicators.reduce((acc, curr) => acc + curr.weight, 0);
+
   return (
     <GlassCard>
       <SectionHeader
@@ -48,7 +50,6 @@ export const WeightDonutChart: React.FC<WeightDonutChartProps> = ({
               {/* Segments mapped to dynamic contrast palette */}
               {indicators.map((ind, idx) => {
                 const color = dynamicPalette[idx % dynamicPalette.length];
-                const totalSum = indicators.reduce((acc, curr) => acc + curr.weight, 0);
                 const prevSum = indicators.slice(0, idx).reduce((acc, curr) => acc + curr.weight, 0);
 
                 const slicePercent = (ind.weight / (totalSum || 100)) * 100;

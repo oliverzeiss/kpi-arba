@@ -1,5 +1,5 @@
-import React from 'react';
-import { User, Briefcase, Calendar, Lock, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Briefcase, Calendar, Lock, ChevronDown, Search } from 'lucide-react';
 import { Position } from '@/types/kpi';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -21,6 +21,23 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
   positions,
   activePeriod = 'Juli 2026',
 }) => {
+  const [autocompleteNames, setAutocompleteNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchNames() {
+      try {
+        const res = await fetch('/api/employees/autocomplete');
+        if (res.ok) {
+          const names = await res.json();
+          setAutocompleteNames(names);
+        }
+      } catch (err) {
+        console.error('Failed to load autocomplete names', err);
+      }
+    }
+    fetchNames();
+  }, []);
+
   return (
     <GlassCard>
       <SectionHeader
@@ -30,7 +47,7 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 items-start relative z-10">
         {/* Input Nama Karyawan */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 relative">
           <label className="flex items-center justify-between h-7 text-xs sm:text-sm font-bold text-slate-100">
             <span className="flex items-center gap-2">
               <User className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -42,13 +59,24 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
               Wajib Diisi
             </span>
           </label>
-          <input
-            type="text"
-            placeholder="Masukkan Nama Lengkap Anda..."
-            value={employeeName}
-            onChange={(e) => onEmployeeNameChange(e.target.value)}
-            className="w-full h-12 bg-[#051520]/90 hover:bg-[#071c2b] border border-cyan-400/50 hover:border-cyan-300 focus:border-cyan-200 focus:ring-2 focus:ring-cyan-400/30 rounded-full px-5 text-sm text-white placeholder:text-slate-400 focus:outline-none transition-all font-semibold shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md"
-          />
+          <div className="relative w-full">
+            <input
+              type="text"
+              list="employeeNamesFormList"
+              placeholder="Masukkan Nama Lengkap Anda..."
+              value={employeeName}
+              onChange={(e) => onEmployeeNameChange(e.target.value.toUpperCase())}
+              className="w-full h-12 bg-[#051520]/90 hover:bg-[#071c2b] border border-cyan-400/50 hover:border-cyan-300 focus:border-cyan-200 focus:ring-2 focus:ring-cyan-400/30 rounded-full pl-5 pr-10 text-sm text-white placeholder:text-slate-400 focus:outline-none transition-all font-semibold shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md"
+            />
+            {autocompleteNames.length > 0 && (
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-500/50 pointer-events-none" />
+            )}
+            <datalist id="employeeNamesFormList">
+              {autocompleteNames.map((name, i) => (
+                <option key={i} value={name} />
+              ))}
+            </datalist>
+          </div>
         </div>
 
         {/* Select Jabatan */}
