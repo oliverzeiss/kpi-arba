@@ -62,9 +62,9 @@ export async function GET(req: NextRequest) {
         const monthInQuarter = ((sub.month - 1) % 3) + 1;
         const scoreToUse = sub.finalTotalScore ?? (sub.supervisorTotalScore ?? sub.totalScore);
 
-        if (monthInQuarter === 1) recapMap[key].month1Score = scoreToUse;
-        if (monthInQuarter === 2) recapMap[key].month2Score = scoreToUse;
-        if (monthInQuarter === 3) recapMap[key].month3Score = scoreToUse;
+        if (monthInQuarter === 1 && recapMap[key].month1Score === undefined) recapMap[key].month1Score = scoreToUse;
+        if (monthInQuarter === 2 && recapMap[key].month2Score === undefined) recapMap[key].month2Score = scoreToUse;
+        if (monthInQuarter === 3 && recapMap[key].month3Score === undefined) recapMap[key].month3Score = scoreToUse;
 
         const availableScores: number[] = [];
         if (recapMap[key].month1Score !== undefined) availableScores.push(recapMap[key].month1Score!);
