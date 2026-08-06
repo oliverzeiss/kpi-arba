@@ -66,7 +66,7 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
               placeholder="Masukkan Nama Lengkap Anda..."
               value={employeeName}
               onChange={(e) => onEmployeeNameChange(e.target.value.toUpperCase())}
-              className="w-full h-12 bg-[#051520]/90 hover:bg-[#071c2b] border border-cyan-400/50 hover:border-cyan-300 focus:border-cyan-200 focus:ring-2 focus:ring-cyan-400/30 rounded-full pl-5 pr-10 text-sm text-white placeholder:text-slate-400 focus:outline-none transition-all font-semibold shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md"
+              className="w-full h-12 bg-[#051520]/90 hover:bg-[#071c2b] border border-cyan-400/50 hover:border-cyan-300 focus:border-cyan-200 focus:ring-2 focus:ring-cyan-400/30 rounded-full pl-5 pr-10 text-base sm:text-sm text-white placeholder:text-slate-400 focus:outline-none transition-all font-semibold shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md"
             />
             {autocompleteNames.length > 0 && (
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-500/50 pointer-events-none" />
@@ -94,7 +94,7 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
             <select
               value={selectedPositionId}
               onChange={(e) => onPositionChange(e.target.value)}
-              className="w-full h-12 appearance-none bg-[#051520]/90 hover:bg-[#071c2b] border border-cyan-400/50 hover:border-cyan-300 focus:border-cyan-200 focus:ring-2 focus:ring-cyan-400/30 rounded-full pl-5 pr-12 text-sm text-cyan-300 focus:outline-none transition-all cursor-pointer font-semibold shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md"
+              className="w-full h-12 appearance-none bg-[#051520]/90 hover:bg-[#071c2b] border border-cyan-400/50 hover:border-cyan-300 focus:border-cyan-200 focus:ring-2 focus:ring-cyan-400/30 rounded-full pl-5 pr-12 text-base sm:text-sm text-cyan-300 focus:outline-none transition-all cursor-pointer font-semibold shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md"
             >
               {positions.map((pos) => (
                 <option key={pos.id} value={pos.id} className="bg-[#061e2b] text-cyan-300 font-semibold py-2">
@@ -117,7 +117,7 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
               (Terkunci)
             </span>
           </label>
-          <div className="w-full h-12 bg-[#051520]/90 border border-cyan-400/50 rounded-full px-5 text-sm font-semibold text-cyan-300 flex items-center justify-between shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md">
+          <div className="w-full h-12 bg-[#051520]/90 border border-cyan-400/50 rounded-full px-5 text-base sm:text-sm font-semibold text-cyan-300 flex items-center justify-between shadow-[0_0_20px_rgba(6,182,212,0.2)] backdrop-blur-md">
             <span>{activePeriod}</span>
             <Lock className="w-4 h-4 text-cyan-400 shrink-0" />
           </div>

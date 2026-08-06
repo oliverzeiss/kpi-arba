@@ -433,23 +433,23 @@ export default function MasterTemplatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-cyan-500/30 selection:text-cyan-200 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 pb-24 relative">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-cyan-500/30 selection:text-cyan-200 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto space-y-6 pb-24 relative">
       {/* Background Radial Ambient Glows */}
       <div className="absolute top-[-5%] left-[15%] w-[400px] h-[400px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none animate-blob-1" />
       <div className="absolute bottom-[20%] right-[10%] w-[350px] h-[350px] rounded-full bg-emerald-500/10 blur-[130px] pointer-events-none animate-blob-2" />
 
       {/* Navigation Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-cyan-500/20 pb-4 relative z-10">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md pt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-cyan-500/20 pb-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <Link
             href="/"
-            className="p-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:text-white transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95 shrink-0"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:text-white transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95 shrink-0"
             title="Kembali ke Form Karyawan"
           >
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold font-sans text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)]">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-sans text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)]">
               Master Admin & HR Analytics
             </h1>
             <p className="text-xs text-slate-300 font-medium mt-1">
@@ -459,7 +459,7 @@ export default function MasterTemplatePage() {
         </div>
 
         {/* Tab Selector: Builder vs Review vs Rekap vs Executive Analytics */}
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#051520]/90 border border-cyan-400/40 overflow-x-auto max-w-full backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)] shrink-0">
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#051520]/90 border border-cyan-400/40 overflow-x-auto w-full sm:max-w-full backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)] shrink-0">
           <button
             onClick={() => setActiveTab('builder')}
             className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${

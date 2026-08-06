@@ -54,7 +54,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <select
         value={filters.month || 0}
         onChange={(e) => onChange({ ...filters, month: Number(e.target.value) })}
-        className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
+        className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 h-11 text-base sm:text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
       >
         {months.map((m) => (
           <option key={m.value} value={m.value}>
@@ -68,7 +68,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <select
           value={filters.divisionName || ''}
           onChange={(e) => onChange({ ...filters, divisionName: e.target.value })}
-          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
+          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 h-11 text-base sm:text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
         >
           <option value="">Semua Divisi</option>
           {divisions.map((d) => (
@@ -84,7 +84,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <select
           value={filters.positionId || ''}
           onChange={(e) => onChange({ ...filters, positionId: e.target.value })}
-          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
+          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 h-11 text-base sm:text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
         >
           <option value="">Semua Jabatan</option>
           {positions.map((p) => (
@@ -100,7 +100,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <select
           value={filters.status || ''}
           onChange={(e) => onChange({ ...filters, status: e.target.value })}
-          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
+          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 h-11 text-base sm:text-xs text-cyan-300 font-semibold focus:outline-none focus:border-cyan-300 cursor-pointer"
         >
           <option value="">Semua Status</option>
           <option value="submitted">Submitted 🟡</option>
@@ -116,7 +116,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           placeholder="Cari nama karyawan..."
           value={filters.searchQuery || ''}
           onChange={(e) => onChange({ ...filters, searchQuery: e.target.value })}
-          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-slate-400/70 focus:outline-none focus:border-cyan-300 font-medium ml-auto min-w-[160px]"
+          className="bg-[#061e2b] border border-cyan-400/40 rounded-xl px-3 h-11 text-base sm:text-xs text-white placeholder:text-slate-400/70 focus:outline-none focus:border-cyan-300 font-medium ml-auto min-w-[160px] w-full sm:w-auto"
         />
       )}
     </div>

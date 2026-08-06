@@ -191,7 +191,7 @@ export default function EmployeeKPIPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.9)]" />
             </span>
-            <span className="text-white font-extrabold tracking-tight text-lg sm:text-xl">
+            <span className="text-white font-extrabold tracking-tight text-xl sm:text-2xl lg:text-3xl">
               Sistem KPI
             </span>
           </div>
@@ -206,7 +206,7 @@ export default function EmployeeKPIPage() {
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <Link
             href="/master"
-            className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.15)] active:scale-95 whitespace-nowrap shrink-0"
+            className="inline-flex items-center justify-center gap-2.5 px-5 min-h-[44px] rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.15)] active:scale-95 whitespace-nowrap shrink-0"
           >
             <Lock className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>Admin Master</span>
@@ -215,7 +215,7 @@ export default function EmployeeKPIPage() {
       </nav>
 
       {/* MAIN CONTENT */}
-      <div className="pt-24 md:pt-28 pb-24 max-w-6xl mx-auto px-4 sm:px-6 md:px-12 space-y-5 sm:space-y-6">
+      <div className="pt-24 md:pt-28 pb-24 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-6">
         {/* HERO SECTION - Preview Card */}
         <div className="flex justify-center w-full">
           <KpiPreviewCard

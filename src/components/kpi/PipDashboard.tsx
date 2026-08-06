@@ -52,7 +52,7 @@ export const PipDashboard: React.FC<PipDashboardProps> = ({ submissions, company
         </span>
       </div>
 
-      <div className="overflow-x-auto relative z-10 pt-4">
+      <div className="w-full overflow-x-auto relative z-10 pt-4">
         {pipSubmissions.length === 0 ? (
           <div className="py-5 text-center text-slate-400 text-xs font-medium border border-dashed border-cyan-500/20 rounded-xl bg-[#051520]/50">
             ✅ Tidak ada karyawan dalam kategori PIP (Semua skor ≥ {companyKpiTarget} / Grade B ke atas).

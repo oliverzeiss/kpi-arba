@@ -107,7 +107,7 @@ export const RecapTab: React.FC<RecapTabProps> = ({ submissions = [] }) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto relative z-10">
+      <div className="w-full overflow-x-auto relative z-10">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-cyan-500/20 text-cyan-300 font-bold uppercase text-[11px] tracking-wider">
