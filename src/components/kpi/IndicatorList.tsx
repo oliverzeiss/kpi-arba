@@ -52,7 +52,7 @@ export const IndicatorList: React.FC<IndicatorListProps> = ({
             <div
               key={ind.id}
               onClick={() => onIndicatorClick(ind)}
-              className="flex items-center justify-between p-5 rounded-2xl bg-[#051520]/80 hover:bg-[#071c2b] border border-cyan-400/30 hover:border-cyan-300 hover:translate-x-1.5 transition duration-300 relative overflow-hidden group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.3)] backdrop-blur-md"
+              className="flex items-center justify-between p-3 sm:p-5 rounded-2xl bg-[#051520]/80 hover:bg-[#071c2b] border border-cyan-400/30 hover:border-cyan-300 hover:translate-x-1.5 transition duration-300 relative overflow-hidden group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.3)] backdrop-blur-md"
             >
               {/* Left Accent Line */}
               <div
@@ -61,16 +61,16 @@ export const IndicatorList: React.FC<IndicatorListProps> = ({
               />
 
               {/* Number Badge & Info */}
-              <div className="flex items-center gap-4 min-w-0 pr-4">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/40 font-bold text-sm text-cyan-300 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.15)] group-hover:scale-105 group-hover:border-cyan-300 transition-all">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0 pr-2 sm:pr-4 flex-1">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/40 font-bold text-xs sm:text-sm text-cyan-300 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.15)] group-hover:scale-105 group-hover:border-cyan-300 transition-all">
                   {idx + 1}
                 </div>
 
-                <div className="min-w-0">
-                  <h3 className="text-base font-bold text-white truncate group-hover:text-cyan-300 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm sm:text-base font-bold text-white line-clamp-2 group-hover:text-cyan-300 transition-colors leading-snug">
                     {ind.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
+                  <p className="text-[10px] sm:text-xs text-slate-300 font-medium mt-1">
                     Indikator Utama • Bobot: <span className="text-slate-100 font-semibold">{ind.weight}%</span>
                   </p>
                 </div>

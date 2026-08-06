@@ -184,31 +184,31 @@ export default function EmployeeKPIPage() {
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* NAVBAR */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#070a10]/85 backdrop-blur-2xl border-b border-white/10 px-6 md:px-12 py-3.5 sm:py-4 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-2.5 w-2.5">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#070a10]/85 backdrop-blur-2xl border-b border-white/10 px-3 sm:px-6 md:px-12 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-y-2 shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.9)]" />
+              <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.9)]" />
             </span>
-            <span className="text-white font-extrabold tracking-tight text-xl sm:text-2xl lg:text-3xl">
+            <span className="text-white font-extrabold tracking-tight text-lg sm:text-2xl lg:text-3xl">
               Sistem KPI
             </span>
           </div>
 
-          <span className="text-white/20 font-light select-none">|</span>
+          <span className="hidden sm:inline text-white/20 font-light select-none">|</span>
 
-          <span className="text-xs font-bold tracking-wider uppercase text-cyan-300 bg-cyan-500/10 border border-cyan-500/40 px-3.5 py-1.5 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.15)] select-none shrink-0">
+          <span className="text-[10px] sm:text-xs font-bold tracking-wider uppercase text-cyan-300 bg-cyan-500/10 border border-cyan-500/40 px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.15)] select-none shrink-0">
             ARBA GROUP
           </span>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0 mt-1 sm:mt-0">
           <Link
             href="/master"
-            className="inline-flex items-center justify-center gap-2.5 px-5 min-h-[44px] rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.15)] active:scale-95 whitespace-nowrap shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 min-h-[36px] sm:min-h-[44px] rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-[10px] sm:text-sm font-bold text-cyan-300 hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.15)] active:scale-95 whitespace-nowrap shrink-0"
           >
-            <Lock className="w-4 h-4 text-cyan-400 shrink-0" />
+            <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
             <span>Admin Master</span>
           </Link>
         </div>

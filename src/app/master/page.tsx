@@ -439,20 +439,20 @@ export default function MasterTemplatePage() {
       <div className="absolute bottom-[20%] right-[10%] w-[350px] h-[350px] rounded-full bg-emerald-500/10 blur-[130px] pointer-events-none animate-blob-2" />
 
       {/* Navigation Header */}
-      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md pt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-cyan-500/20 pb-4">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md pt-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-cyan-500/20 pb-4">
+        <div className="flex items-start sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
           <Link
             href="/"
-            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:text-white transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95 shrink-0"
+            className="flex items-center justify-center min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:text-white transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95 shrink-0 mt-1 sm:mt-0"
             title="Kembali ke Form Karyawan"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-sans text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)]">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-extrabold font-sans text-m5-gradient drop-shadow-[0_0_20px_rgba(0,229,255,0.15)] leading-tight">
               Master Admin & HR Analytics
             </h1>
-            <p className="text-xs text-slate-300 font-medium mt-1">
+            <p className="text-[10px] sm:text-xs text-slate-300 font-medium mt-1 leading-snug">
               Kelola Template KPI, review penilaian atasan, rekap triwulan, dan analisis eksekutif.
             </p>
           </div>
