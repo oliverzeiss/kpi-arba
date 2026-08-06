@@ -77,6 +77,18 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
+        {/* Catatan Pencapaian Karyawan */}
+        {submission.achievementNotes && (
+          <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+            <label className="text-[11px] font-extrabold text-cyan-300 uppercase tracking-wider block mb-1.5">
+              CATATAN PENCAPAIAN DARI KARYAWAN
+            </label>
+            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+              {submission.achievementNotes}
+            </p>
+          </div>
+        )}
+
         {/* Indicator Dual-Scoring Table */}
         <div className="space-y-4">
           <label className="text-xs font-extrabold text-cyan-300 uppercase tracking-wider block">

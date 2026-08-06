@@ -99,6 +99,7 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
               <th className="py-3 px-4">Divisi / Jabatan</th>
               <th className="py-3 px-4 text-center">Periode</th>
               <th className="py-3 px-4 text-center">Self Score</th>
+              <th className="py-3 px-4 text-center">Catatan Pencapaian</th>
               <th className="py-3 px-4 text-center">Atasan/Reviewer Score</th>
               <th className="py-3 px-4 text-center">Status</th>
               <th className="py-3 px-4 text-center">Aksi Review</th>
@@ -124,6 +125,9 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
                   <td className="py-3.5 px-4 text-center font-mono text-slate-300 whitespace-nowrap">
                     {safeTotalScore} ({safeGrade})
                   </td>
+                  <td className="py-3.5 px-4 text-sm text-slate-300 max-w-[200px] truncate" title={sub.achievementNotes || '-'}>
+                    {sub.achievementNotes || '-'}
+                  </td>
                   <td className="py-3.5 px-4 text-center font-mono font-bold text-cyan-300 whitespace-nowrap">
                     {finalScoreDisplay}
                   </td>
@@ -145,7 +149,7 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
 
             {filteredSubmissions.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                <td colSpan={8} className="py-8 text-center text-slate-400 font-medium">
                   Belum ada data submission yang sesuai dengan filter.
                 </td>
               </tr>
