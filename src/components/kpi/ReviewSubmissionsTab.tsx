@@ -38,6 +38,27 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
   });
 
   const [selectedSubmission, setSelectedSubmission] = useState<KPISubmission | null>(null);
+  const [submissionIndicators, setSubmissionIndicators] = useState<Indicator[]>([]);
+  const [isLoadingIndicators, setIsLoadingIndicators] = useState(false);
+
+  const handleReviewClick = async (sub: KPISubmission) => {
+    setSelectedSubmission(sub);
+    setIsLoadingIndicators(true);
+    try {
+      const res = await fetch(`/api/kpi/master?positionId=${sub.positionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSubmissionIndicators(data?.indicators || []);
+      } else {
+        setSubmissionIndicators([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch indicators', e);
+      setSubmissionIndicators([]);
+    } finally {
+      setIsLoadingIndicators(false);
+    }
+  };
 
   // Apply filters
   const filteredSubmissions = submissions.filter((sub) => {
@@ -136,7 +157,7 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
                   </td>
                   <td className="py-3.5 px-4 text-center whitespace-nowrap">
                     <button
-                      onClick={() => setSelectedSubmission(sub)}
+                      onClick={() => handleReviewClick(sub)}
                       className="px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:text-white text-xs font-bold flex items-center gap-1.5 mx-auto transition-all cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5 text-cyan-400" />
@@ -162,11 +183,15 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
       <ReviewModal
         isOpen={Boolean(selectedSubmission)}
         submission={selectedSubmission}
-        indicators={indicators}
-        onClose={() => setSelectedSubmission(null)}
+        indicators={submissionIndicators}
+        onClose={() => {
+          setSelectedSubmission(null);
+          setSubmissionIndicators([]);
+        }}
         onSubmitReview={(id, supScores, notes, status, reviewerName) => {
           onUpdateSubmissionReview(id, supScores, notes, status, reviewerName);
           setSelectedSubmission(null);
+          setSubmissionIndicators([]);
         }}
       />
     </GlassCard>
