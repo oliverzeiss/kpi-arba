@@ -19,6 +19,7 @@ import {
   KPISubmission,
 } from '@/types/kpi';
 import { getSupabaseConfig, SUPABASE_SQL_SCHEMA } from '@/lib/supabase';
+import { fetchAllTemplatesClient } from '@/lib/excel-export-client';
 
 import { PinAuthScreen } from '@/components/kpi/PinAuthScreen';
 import { MasterBuilderTab } from '@/components/kpi/MasterBuilderTab';
@@ -38,6 +39,8 @@ export default function MasterTemplatePage() {
   // Master Data State
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [templates, setTemplates] = useState<KPITemplate[]>([]);
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
   const [submissions, setSubmissions] = useState<KPISubmission[]>([]);
   const [selectedPositionId, setSelectedPositionId] = useState<string>('pos-3'); // Default Admin IT
 
@@ -96,6 +99,13 @@ export default function MasterTemplatePage() {
     }
   };
 
+  const fetchAllTemplates = async (): Promise<KPITemplate[]> => {
+    const loaded = await fetchAllTemplatesClient();
+    setTemplates(loaded);
+    setTemplatesLoaded(true);
+    return loaded;
+  };
+
   const fetchMasterData = () => {
     fetch('/api/kpi/master')
       .then((res) => res.json())
@@ -105,6 +115,7 @@ export default function MasterTemplatePage() {
       })
       .catch(console.error);
 
+    fetchAllTemplates().catch(console.error);
     fetchSubmissionsData();
   };
 
@@ -167,6 +178,7 @@ export default function MasterTemplatePage() {
     if (activeTab === 'recap' || activeTab === 'analytics' || activeTab === 'review') {
       fetchQuarterlyRecap();
       fetchSubmissionsData();
+      fetchAllTemplates().catch(console.error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -196,6 +208,7 @@ export default function MasterTemplatePage() {
       }
 
       setSaveStatus('Master Template KPI Berhasil Disimpan!');
+      fetchAllTemplates().catch(console.error);
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal menyimpan template');
     }
@@ -397,8 +410,6 @@ export default function MasterTemplatePage() {
     );
 
     try {
-      // Actually save to backend API
-      const templateForSub = submissions.find(s => s.id === submissionId);
       const res = await fetch(`/api/submissions/${submissionId}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -409,13 +420,25 @@ export default function MasterTemplatePage() {
           reviewerName,
         }),
       });
-      
+
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        console.error('Failed to update submission review');
+        console.error('Failed to update submission review:', data?.error);
+        alert(data?.error || 'Gagal menyimpan hasil review ke server.');
         fetchSubmissionsData(); // Revert on failure
+        return;
+      }
+
+      if (data?.submission) {
+        setSubmissions((prev) =>
+          prev.map((sub) => (sub.id === submissionId ? data.submission : sub))
+        );
+      } else {
+        fetchSubmissionsData();
       }
     } catch (err) {
       console.error(err);
+      alert('Terjadi kesalahan jaringan saat menyimpan review.');
       fetchSubmissionsData(); // Revert on failure
     }
   };
@@ -563,13 +586,19 @@ export default function MasterTemplatePage() {
           divisions={divisions}
           positions={positions}
           indicators={template?.indicators || []}
+          templates={templatesLoaded ? templates : undefined}
+          onEnsureTemplates={fetchAllTemplates}
           onUpdateSubmissionReview={handleUpdateSubmissionReview}
           onRefreshData={fetchSubmissionsData}
         />
       )}
 
       {activeTab === 'recap' && (
-        <RecapTab submissions={submissions} />
+        <RecapTab
+          submissions={submissions}
+          templates={templatesLoaded ? templates : undefined}
+          onEnsureTemplates={fetchAllTemplates}
+        />
       )}
 
       {activeTab === 'analytics' && (

@@ -7,6 +7,7 @@ import {
 } from './storage';
 import { Division, Position, KPITemplate, KPISubmission } from '@/types/kpi';
 import { calculateTotalScore, calculateGrade } from './kpi-calculator';
+import { buildIndicatorSnapshots } from './indicator-resolver';
 
 // In-memory fallback stores
 let inMemoryDivisions: Division[] = [...INITIAL_DIVISIONS];
@@ -280,14 +281,24 @@ export async function fetchSubmissionsService(filters?: {
           month: s.month,
           quarter: s.quarter,
           scores: s.self_scores_json || s.scores_json || {},
-          totalScore: Number(s.self_total_score || s.total_score || 0),
+          indicatorSnapshots: Array.isArray(s.indicator_snapshots_json) ? s.indicator_snapshots_json : undefined,
+          totalScore:
+            s.self_total_score !== null && s.self_total_score !== undefined
+              ? Number(s.self_total_score)
+              : Number(s.total_score ?? 0),
           grade: s.self_grade || s.grade,
           gradeDescription: s.self_grade_description || s.grade_description,
           supervisorScores: s.supervisor_scores_json,
-          supervisorTotalScore: s.supervisor_total_score ? Number(s.supervisor_total_score) : undefined,
+          supervisorTotalScore:
+            s.supervisor_total_score !== null && s.supervisor_total_score !== undefined
+              ? Number(s.supervisor_total_score)
+              : undefined,
           supervisorGrade: s.supervisor_grade,
           supervisorGradeDescription: s.supervisor_grade_description,
-          finalTotalScore: s.final_total_score ? Number(s.final_total_score) : undefined,
+          finalTotalScore:
+            s.final_total_score !== null && s.final_total_score !== undefined
+              ? Number(s.final_total_score)
+              : undefined,
           finalGrade: s.final_grade,
           finalGradeDescription: s.final_grade_description,
           status: s.status || 'submitted',
@@ -324,6 +335,7 @@ export async function createSubmissionService(
 ): Promise<KPISubmission> {
   const selfTotal = calculateTotalScore(scores, template.indicators);
   const selfGrade = calculateGrade(selfTotal);
+  const indicatorSnapshots = buildIndicatorSnapshots(template.indicators);
 
   const newSub: KPISubmission = {
     id: `sub-${Date.now()}`,
@@ -336,6 +348,7 @@ export async function createSubmissionService(
     month: template.activeMonth || 7,
     quarter: template.activeQuarter || 'Q3',
     scores,
+    indicatorSnapshots,
     totalScore: selfTotal,
     grade: selfGrade.grade,
     gradeDescription: selfGrade.description,
@@ -345,37 +358,58 @@ export async function createSubmissionService(
   };
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const row = {
-        id: newSub.id,
-        employee_name: newSub.employeeName,
-        position_id: newSub.positionId,
-        position_title: newSub.positionTitle,
-        division_name: newSub.divisionName,
-        period: newSub.period,
-        year: newSub.year,
-        month: newSub.month,
-        quarter: newSub.quarter,
-        self_scores_json: scores,
-        self_total_score: selfTotal,
-        self_grade: selfGrade.grade,
-        self_grade_description: selfGrade.description,
-        status: 'submitted',
-        achievement_notes: achievementNotes || '',
-      };
+    const baseRow = {
+      id: newSub.id,
+      employee_name: newSub.employeeName,
+      position_id: newSub.positionId,
+      position_title: newSub.positionTitle,
+      division_name: newSub.divisionName,
+      period: newSub.period,
+      year: newSub.year,
+      month: newSub.month,
+      quarter: newSub.quarter,
+      self_scores_json: scores,
+      self_total_score: selfTotal,
+      self_grade: selfGrade.grade,
+      self_grade_description: selfGrade.description,
+      status: 'submitted',
+      achievement_notes: achievementNotes || '',
+    };
 
-      const { error } = await supabase.from('kpi_submissions').insert([row]);
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error(`Karyawan "${employeeName}" sudah mengirim penilaian untuk periode ${newSub.period}!`);
-        }
-        throw new Error(error.message);
+    const rowWithSnapshot = {
+      ...baseRow,
+      indicator_snapshots_json: indicatorSnapshots,
+    };
+
+    const { error } = await supabase.from('kpi_submissions').insert([rowWithSnapshot]);
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error(`Karyawan "${employeeName}" sudah mengirim penilaian untuk periode ${newSub.period}!`);
       }
-      return newSub;
-    } catch (e: any) {
-      console.warn('[SupabaseService] createSubmission error:', e);
-      if (e.message && e.message.includes('sudah mengirim')) throw e;
+
+      const isMissingSnapshotColumn =
+        error.code === '42703' ||
+        error.code === 'PGRST204' ||
+        Boolean(error.message && error.message.includes('indicator_snapshots_json'));
+
+      if (isMissingSnapshotColumn) {
+        console.warn(
+          '[SupabaseService] Column indicator_snapshots_json missing in DB; retrying insert without snapshot.',
+          error.message
+        );
+        const { error: retryError } = await supabase.from('kpi_submissions').insert([baseRow]);
+        if (retryError) {
+          if (retryError.code === '23505') {
+            throw new Error(`Karyawan "${employeeName}" sudah mengirim penilaian untuk periode ${newSub.period}!`);
+          }
+          throw new Error(retryError.message);
+        }
+        return newSub;
+      }
+
+      throw new Error(error.message);
     }
+    return newSub;
   }
 
   // Prevent duplicate in-memory
@@ -393,6 +427,21 @@ export async function createSubmissionService(
   return newSub;
 }
 
+export interface ReviewUpdateResult {
+  supervisorScores: Record<string, number>;
+  supervisorTotalScore: number;
+  supervisorGrade: string;
+  supervisorGradeDescription: string;
+  finalTotalScore?: number;
+  finalGrade?: string;
+  finalGradeDescription?: string;
+  reviewerNotes: string;
+  status: 'reviewed' | 'approved';
+  reviewedBy?: string;
+  reviewedAt: string;
+  approvedAt?: string;
+}
+
 export async function updateSubmissionReviewService(
   submissionId: string,
   supervisorScores: Record<string, number>,
@@ -400,61 +449,66 @@ export async function updateSubmissionReviewService(
   reviewerNotes: string,
   status: 'reviewed' | 'approved',
   reviewerName?: string
-) {
+): Promise<ReviewUpdateResult> {
   const supTotal = calculateTotalScore(supervisorScores, indicators);
   const supGrade = calculateGrade(supTotal);
+  const nowIso = new Date().toISOString();
+
+  const result: ReviewUpdateResult = {
+    supervisorScores,
+    supervisorTotalScore: supTotal,
+    supervisorGrade: supGrade.grade,
+    supervisorGradeDescription: supGrade.description,
+    reviewerNotes,
+    status,
+    reviewedAt: nowIso,
+    ...(reviewerName && { reviewedBy: reviewerName }),
+    ...(status === 'approved' && {
+      finalTotalScore: supTotal,
+      finalGrade: supGrade.grade,
+      finalGradeDescription: supGrade.description,
+      approvedAt: nowIso,
+    }),
+  };
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const updates: any = {
-        supervisor_scores_json: supervisorScores,
-        supervisor_total_score: supTotal,
-        supervisor_grade: supGrade.grade,
-        supervisor_grade_description: supGrade.description,
-        reviewer_notes: reviewerNotes,
-        status,
-        reviewed_at: new Date().toISOString(),
-        ...(reviewerName && { reviewed_by: reviewerName }),
-      };
+    const updates: any = {
+      supervisor_scores_json: supervisorScores,
+      supervisor_total_score: supTotal,
+      supervisor_grade: supGrade.grade,
+      supervisor_grade_description: supGrade.description,
+      reviewer_notes: reviewerNotes,
+      status,
+      reviewed_at: nowIso,
+      ...(reviewerName && { reviewed_by: reviewerName }),
+    };
 
-      if (status === 'approved') {
-        updates.final_total_score = supTotal;
-        updates.final_grade = supGrade.grade;
-        updates.final_grade_description = supGrade.description;
-        updates.approved_at = new Date().toISOString();
-      }
-
-      await supabase.from('kpi_submissions').update(updates).eq('id', submissionId);
-      return;
-    } catch (e) {
-      console.warn('[SupabaseService] updateSubmissionReview error:', e);
+    if (status === 'approved') {
+      updates.final_total_score = supTotal;
+      updates.final_grade = supGrade.grade;
+      updates.final_grade_description = supGrade.description;
+      updates.approved_at = nowIso;
     }
+
+    const { error } = await supabase.from('kpi_submissions').update(updates).eq('id', submissionId);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return result;
   }
 
   // In-memory update
   inMemorySubmissions = inMemorySubmissions.map((sub) => {
     if (sub.id === submissionId) {
-      const updated = {
+      return {
         ...sub,
-        supervisorScores,
-        supervisorTotalScore: supTotal,
-        supervisorGrade: supGrade.grade,
-        supervisorGradeDescription: supGrade.description,
-        reviewerNotes,
-        status,
-        reviewedAt: new Date().toISOString(),
-        ...(reviewerName && { reviewedBy: reviewerName }),
+        ...result,
       };
-      if (status === 'approved') {
-        updated.finalTotalScore = supTotal;
-        updated.finalGrade = supGrade.grade;
-        updated.finalGradeDescription = supGrade.description;
-        updated.approvedAt = new Date().toISOString();
-      }
-      return updated;
     }
     return sub;
   });
+
+  return result;
 }
 
 // ============================================================================

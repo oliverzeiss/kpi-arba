@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { ExecutiveReportData, KPISubmission, Division, Position } from '@/types/kpi';
+import { useState, useEffect, useCallback } from 'react';
+import { ExecutiveReportData, KPISubmission, KPITemplate, Division, Position } from '@/types/kpi';
+import { fetchAllTemplatesClient } from '@/lib/excel-export-client';
 
 export function useExecutiveAnalytics() {
   const currentYear = new Date().getFullYear();
@@ -16,6 +17,8 @@ export function useExecutiveAnalytics() {
   const [submissions, setSubmissions] = useState<KPISubmission[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [templates, setTemplates] = useState<KPITemplate[]>([]);
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
   const [autocompleteNames, setAutocompleteNames] = useState<string[]>([]);
   
   // Loading & Error States
@@ -25,18 +28,33 @@ export function useExecutiveAnalytics() {
   const [targetKpi, setTargetKpi] = useState<number>(75);
   const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
+  const refreshTemplates = useCallback(async (): Promise<KPITemplate[]> => {
+    const loaded = await fetchAllTemplatesClient();
+    setTemplates(loaded);
+    setTemplatesLoaded(true);
+    return loaded;
+  }, []);
+
   // Fetch initial master data
   useEffect(() => {
     async function fetchMasterData() {
       try {
-        const [divRes, posRes, autoRes] = await Promise.all([
+        const [divRes, posRes, autoRes, masterRes] = await Promise.all([
           fetch('/api/divisions'),
           fetch('/api/positions'),
-          fetch('/api/employees/autocomplete')
+          fetch('/api/employees/autocomplete'),
+          fetch(`/api/kpi/master?all=true&t=${Date.now()}`, { cache: 'no-store' })
         ]);
         if (divRes.ok) setDivisions(await divRes.json());
         if (posRes.ok) setPositions(await posRes.json());
         if (autoRes.ok) setAutocompleteNames(await autoRes.json());
+        if (masterRes.ok) {
+          const masterData = await masterRes.json();
+          if (Array.isArray(masterData?.templates)) {
+            setTemplates(masterData.templates);
+            setTemplatesLoaded(true);
+          }
+        }
       } catch (err: any) {
         console.error('Error fetching master data:', err);
       }
@@ -126,6 +144,8 @@ export function useExecutiveAnalytics() {
       submissions,
       divisions,
       positions,
+      templates,
+      templatesLoaded,
       autocompleteNames,
       isLoading,
       error,
@@ -141,7 +161,8 @@ export function useExecutiveAnalytics() {
       setSelectedPosition,
       setSearchEmployee,
       setTargetKpi,
-      handleUpdateTarget
+      handleUpdateTarget,
+      refreshTemplates
     }
   };
 }

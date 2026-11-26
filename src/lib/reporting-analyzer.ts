@@ -1,4 +1,4 @@
-import {
+import type {
   KPISubmission,
   ExecutiveReportData,
   BottleneckIndicator,
@@ -8,6 +8,7 @@ import {
   KPITemplate,
 } from '@/types/kpi';
 import { calculateGrade } from './kpi-calculator';
+import { buildTemplateMap, resolveSubmissionIndicators, round2 } from './indicator-resolver';
 
 export function generateExecutiveReport(
   submissions: KPISubmission[],
@@ -31,9 +32,8 @@ export function generateExecutiveReport(
     };
   }
 
-  // Convert templates to a dictionary for O(1) lookup
-  const templateMap: Record<string, KPITemplate> = {};
-  templates.forEach(t => { templateMap[t.positionId] = t; });
+  // Convert templates to a Map for O(1) lookup
+  const templateMap = buildTemplateMap(templates);
 
   // 1. Total Submissions & Overall Company Average
   const totalSubmissions = submissions.length;
@@ -129,31 +129,21 @@ export function generateExecutiveReport(
   // 6. Bottleneck Indicators (Lowest scoring indicators)
   const indicatorMap: Record<string, { sum: number; count: number; divisionName: string }> = {};
   submissions.forEach((sub) => {
-    const scoresToUse = sub.supervisorScores ?? sub.scores; // Use supervisor scores if available
-    if (scoresToUse) {
-      Object.keys(scoresToUse).forEach((indKey) => {
-        const score = scoresToUse[indKey];
-        
-        // Resolve title dynamically from template
-        let title = indKey;
-        if (templateMap[sub.positionId]) {
-          const matchedInd = templateMap[sub.positionId].indicators.find(i => i.id === indKey);
-          if (matchedInd) title = matchedInd.title;
-        }
-
-        if (!indicatorMap[title]) {
-          indicatorMap[title] = { sum: 0, count: 0, divisionName: sub.divisionName };
-        }
-        indicatorMap[title].sum += score;
-        indicatorMap[title].count++;
-      });
-    }
+    const resolvedIndicators = resolveSubmissionIndicators(sub, templateMap);
+    resolvedIndicators.forEach((item) => {
+      if (item.effectiveScore === null) return;
+      if (!indicatorMap[item.title]) {
+        indicatorMap[item.title] = { sum: 0, count: 0, divisionName: sub.divisionName };
+      }
+      indicatorMap[item.title].sum += item.effectiveScore;
+      indicatorMap[item.title].count++;
+    });
   });
 
   const bottlenecks: BottleneckIndicator[] = Object.keys(indicatorMap)
     .map((title) => ({
       indicatorTitle: title,
-      averageScore: Math.round((indicatorMap[title].sum / indicatorMap[title].count) * 100) / 100,
+      averageScore: round2(indicatorMap[title].sum / indicatorMap[title].count),
       divisionName: indicatorMap[title].divisionName,
       affectedCount: indicatorMap[title].count,
     }))

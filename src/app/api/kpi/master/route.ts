@@ -3,6 +3,7 @@ import {
   fetchDivisionsService,
   fetchPositionsService,
   fetchTemplateService,
+  fetchAllTemplatesService,
   saveTemplateService,
   addDivisionService,
   editDivisionService,
@@ -17,12 +18,22 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const positionId = searchParams.get('positionId');
+  const includeAll = searchParams.get('all') === 'true';
 
   try {
     if (positionId) {
       const template = await fetchTemplateService(positionId);
       // Return a blank template object if not found (or null), matching frontend behavior
       return NextResponse.json(template || null);
+    }
+
+    if (includeAll) {
+      const [divisions, positions, templates] = await Promise.all([
+        fetchDivisionsService(),
+        fetchPositionsService(),
+        fetchAllTemplatesService(),
+      ]);
+      return NextResponse.json({ divisions, positions, templates });
     }
 
     const divisions = await fetchDivisionsService();

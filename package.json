@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --import ./tests/register.mjs --test tests/indicator-resolver.test.ts tests/excel-exporter.test.ts tests/submission-snapshot.test.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.112.0",
     "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.43.0",

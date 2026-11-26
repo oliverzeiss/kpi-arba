@@ -23,7 +23,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    await updateSubmissionReviewService(
+    const reviewResult = await updateSubmissionReviewService(
       params.id,
       supervisorScores,
       template.indicators,
@@ -32,7 +32,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       reviewerName
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      submission: {
+        ...sub,
+        ...reviewResult,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

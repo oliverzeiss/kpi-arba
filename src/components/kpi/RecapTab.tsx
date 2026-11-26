@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Download, RefreshCw } from 'lucide-react';
-import { QuarterlySummary, KPISubmission } from '@/types/kpi';
-import { exportToExcel } from '@/lib/excel-exporter';
+import { BarChart3, Download, Loader2, RefreshCw } from 'lucide-react';
+import { QuarterlySummary, KPISubmission, KPITemplate } from '@/types/kpi';
+import { runKpiExcelDownload } from '@/lib/excel-export-client';
 import { GlassCard } from '@/components/ui/GlassCard';
 
 interface RecapTabProps {
   // If the parent still wants to pass default or all submissions
   submissions?: KPISubmission[];
+  templates?: KPITemplate[];
+  onEnsureTemplates?: () => Promise<KPITemplate[]>;
 }
 
 const QUARTER_MONTHS: Record<string, [string, string, string]> = {
@@ -16,12 +18,17 @@ const QUARTER_MONTHS: Record<string, [string, string, string]> = {
   Q4: ['Oktober', 'November', 'Desember'],
 };
 
-export const RecapTab: React.FC<RecapTabProps> = ({ submissions = [] }) => {
+export const RecapTab: React.FC<RecapTabProps> = ({
+  submissions = [],
+  templates,
+  onEnsureTemplates,
+}) => {
   const currentYear = new Date().getFullYear();
   const [selectedQuarter, setSelectedQuarter] = useState<'Q1' | 'Q2' | 'Q3' | 'Q4'>('Q3');
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [recapSummaries, setRecapSummaries] = useState<QuarterlySummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const monthNames = QUARTER_MONTHS[selectedQuarter] || QUARTER_MONTHS.Q3;
 
@@ -84,17 +91,31 @@ export const RecapTab: React.FC<RecapTabProps> = ({ submissions = [] }) => {
           </select>
 
           <button
-            onClick={() => {
+            onClick={async () => {
               const filteredSubmissions = submissions.filter(sub => {
                 const actualQuarter = `Q${Math.ceil(sub.month / 3)}`;
                 return actualQuarter === selectedQuarter && sub.year === selectedYear;
               });
-              exportToExcel(filteredSubmissions, recapSummaries);
+              setIsExporting(true);
+              try {
+                await runKpiExcelDownload({
+                  submissions: filteredSubmissions,
+                  templates,
+                  ensureTemplates: onEnsureTemplates,
+                  quarterlySummaries: recapSummaries,
+                  filename: `Laporan_KPI_Triwulan_${selectedQuarter}_${selectedYear}.xlsx`,
+                });
+              } catch (err: any) {
+                alert(err?.message || 'Gagal mengekspor laporan Excel.');
+              } finally {
+                setIsExporting(false);
+              }
             }}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer"
+            disabled={isExporting}
+            className={`px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer ${isExporting ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
-            <Download className="w-4 h-4" />
-            <span>Download Excel (.xls)</span>
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span>{isExporting ? 'Menyiapkan Excel...' : 'Download Excel (.xlsx)'}</span>
           </button>
 
           <button

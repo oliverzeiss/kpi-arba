@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   PieChart as PieIcon,
   Download,
@@ -10,7 +10,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import { exportToCSV, exportToExcel } from '@/lib/excel-exporter';
+import { exportToCSV } from '@/lib/excel-exporter';
+import { runKpiExcelDownload } from '@/lib/excel-export-client';
 import { getSupabaseConfig } from '@/lib/supabase';
 import { exportToPDF } from '@/lib/pdf-reporter';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -21,6 +22,7 @@ import { PerformerRow } from '@/components/kpi/PerformerRow';
 
 export const ExecutiveAnalyticsTab: React.FC = () => {
   const supabaseConfig = getSupabaseConfig();
+  const [isExporting, setIsExporting] = useState(false);
 
   const {
     states: {
@@ -32,6 +34,8 @@ export const ExecutiveAnalyticsTab: React.FC = () => {
       report,
       submissions,
       divisions,
+      templates,
+      templatesLoaded,
       isLoading,
       error,
       targetKpi,
@@ -47,9 +51,27 @@ export const ExecutiveAnalyticsTab: React.FC = () => {
       setSelectedPosition,
       setSearchEmployee,
       setTargetKpi,
-      handleUpdateTarget
+      handleUpdateTarget,
+      refreshTemplates
     }
   } = useExecutiveAnalytics();
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      await runKpiExcelDownload({
+        submissions,
+        templates: templatesLoaded ? templates : undefined,
+        ensureTemplates: refreshTemplates,
+        report,
+        companyKpiTarget: targetKpi,
+      });
+    } catch (err: any) {
+      alert(err?.message || 'Gagal mengekspor laporan Excel.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (error) {
     return (
@@ -200,11 +222,12 @@ export const ExecutiveAnalyticsTab: React.FC = () => {
           </button>
 
           <button
-            onClick={() => exportToExcel(submissions, [], report)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer"
+            onClick={handleExportExcel}
+            disabled={isExporting}
+            className={`px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer ${isExporting ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Download Excel (.xls)</span>
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+            <span>{isExporting ? 'Menyiapkan Excel...' : 'Download Excel (.xlsx)'}</span>
           </button>
 
           <button

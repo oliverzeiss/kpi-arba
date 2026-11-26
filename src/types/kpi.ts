@@ -34,6 +34,14 @@ export interface KPITemplate {
   updatedAt: string;
 }
 
+export interface IndicatorSnapshot {
+  id: string;
+  title: string;
+  weight: number;
+  category?: string;
+  measurementMethod?: string;
+}
+
 export interface KPISubmission {
   id: string;
   employeeName: string; // Mandatory Employee Name
@@ -45,6 +53,7 @@ export interface KPISubmission {
   month: number; // 7
   quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4';
   scores: Record<string, number>; // indicatorId -> score (0-100) (Self-assessment)
+  indicatorSnapshots?: IndicatorSnapshot[]; // Snapshot metadata indikator saat submit
   totalScore: number;
   grade: 'A+' | 'A' | 'B' | 'C' | 'D';
   gradeDescription: string;

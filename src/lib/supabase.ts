@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS kpi_submissions (
 
   -- Self-Assessment Karyawan
   self_scores_json JSONB NOT NULL,
+  indicator_snapshots_json JSONB,
   self_total_score NUMERIC(5,2) NOT NULL,
   self_grade VARCHAR(5) NOT NULL,
   self_grade_description VARCHAR NOT NULL,
@@ -119,4 +120,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
 INSERT INTO app_settings (id, company_kpi_target) 
 VALUES ('default', 75) 
 ON CONFLICT (id) DO NOTHING;
+
+-- Migrasi aman untuk tabel existing agar menyimpan snapshot indikator saat submit
+ALTER TABLE kpi_submissions
+ADD COLUMN IF NOT EXISTS indicator_snapshots_json JSONB;
 `;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Layers, Eye, RefreshCw } from 'lucide-react';
-import { KPISubmission, Division, Position, Indicator } from '@/types/kpi';
+import { Layers, Eye, RefreshCw, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { KPISubmission, Division, Position, Indicator, KPITemplate } from '@/types/kpi';
+import { runKpiExcelDownload } from '@/lib/excel-export-client';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { FilterBar, FilterOptions } from '@/components/ui/FilterBar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -11,6 +12,8 @@ interface ReviewSubmissionsTabProps {
   divisions: Division[];
   positions: Position[];
   indicators: Indicator[];
+  templates?: KPITemplate[];
+  onEnsureTemplates?: () => Promise<KPITemplate[]>;
   onUpdateSubmissionReview: (
     submissionId: string,
     supervisorScores: Record<string, number>,
@@ -26,6 +29,8 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
   divisions,
   positions,
   indicators,
+  templates,
+  onEnsureTemplates,
   onUpdateSubmissionReview,
   onRefreshData,
 }) => {
@@ -40,6 +45,7 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
   const [selectedSubmission, setSelectedSubmission] = useState<KPISubmission | null>(null);
   const [submissionIndicators, setSubmissionIndicators] = useState<Indicator[]>([]);
   const [isLoadingIndicators, setIsLoadingIndicators] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleReviewClick = async (sub: KPISubmission) => {
     setSelectedSubmission(sub);
@@ -77,6 +83,22 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
     return true;
   });
 
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      await runKpiExcelDownload({
+        submissions: filteredSubmissions,
+        templates,
+        ensureTemplates: onEnsureTemplates,
+        filename: 'Laporan_KPI_Review_Submissions.xlsx',
+      });
+    } catch (err: any) {
+      alert(err?.message || 'Gagal mengekspor laporan Excel.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <GlassCard className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-cyan-500/20 pb-4 relative z-10">
@@ -90,15 +112,26 @@ export const ReviewSubmissionsTab: React.FC<ReviewSubmissionsTabProps> = ({
           </p>
         </div>
 
-        {onRefreshData && (
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           <button
-            onClick={onRefreshData}
-            className="px-3.5 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            onClick={handleExportExcel}
+            disabled={isExporting}
+            className={`px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer ${isExporting ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh Data</span>
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+            <span>{isExporting ? 'Menyiapkan Excel...' : 'Download Excel (.xlsx)'}</span>
           </button>
-        )}
+
+          {onRefreshData && (
+            <button
+              onClick={onRefreshData}
+              className="px-3.5 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh Data</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Advanced FilterBar */}
